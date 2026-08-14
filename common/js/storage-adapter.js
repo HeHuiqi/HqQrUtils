@@ -111,5 +111,6 @@
     };
 
     window.StorageAdapter = StorageAdapter;
+    window.StorageManager = StorageAdapter;
 
 })(window);
