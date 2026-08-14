@@ -31,21 +31,14 @@ cp -r "$ROOT_DIR/chrome_ext/icons/"* "$BUILD_DIR/icons/"
 cp "$ROOT_DIR/chrome_ext/index.html" "$BUILD_DIR/index.html"
 cp -r "$ROOT_DIR/chrome_ext/js/"* "$BUILD_DIR/js/"
 
-# 4. 修正路径依赖 (../common/ -> common/)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' 's/\.\.\/common\//common\//g' "$BUILD_DIR/index.html"
-else
-    sed -i 's/\.\.\/common\//common\//g' "$BUILD_DIR/index.html"
-fi
-
-# 5. 打包成可直接上架/发行的 Zip 压缩包
+# 4. 打包成可直接上架/发行的 Zip 压缩包
 if command -v zip >/dev/null 2>&1; then
     echo "🗜️ 正在生成发行 Zip 压缩包: $ZIP_FILE ..."
     (cd "$BUILD_DIR" && zip -rq "$ZIP_FILE" .)
 fi
 
 echo "✅ [Build Chrome Extension] 打包完成！"
-echo "  - 解压版插件目录: $BUILD_DIR"
+echo "  - 解压版插件目录 (可在 chrome://extensions/ 中加载已解压扩展): $BUILD_DIR"
 if [ -f "$ZIP_FILE" ]; then
     echo "  - Zip 发行压缩包: $ZIP_FILE"
 fi

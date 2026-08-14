@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HQ 二维码生成与识别工具箱 (Chrome Extension)</title>
     <!-- 基础与通用样式模块 -->
-    <link rel="stylesheet" href="../common/css/variables.css">
-    <link rel="stylesheet" href="../common/css/base.css">
-    <link rel="stylesheet" href="../common/css/header.css">
-    <link rel="stylesheet" href="../common/css/panels.css">
-    <link rel="stylesheet" href="../common/css/preview.css">
-    <link rel="stylesheet" href="../common/css/history.css">
-    <link rel="stylesheet" href="../common/css/toast.css">
+    <link rel="stylesheet" href="common/css/variables.css">
+    <link rel="stylesheet" href="common/css/base.css">
+    <link rel="stylesheet" href="common/css/header.css">
+    <link rel="stylesheet" href="common/css/panels.css">
+    <link rel="stylesheet" href="common/css/preview.css">
+    <link rel="stylesheet" href="common/css/history.css">
+    <link rel="stylesheet" href="common/css/toast.css">
 </head>
 <body class="theme-light">
     <!-- 全局 Toast 通知容器 -->
@@ -63,15 +63,12 @@
         <main class="main-layout">
             <!-- 左侧：模式选择与表单卡片 -->
             <section class="panel-card input-panel">
-                <!-- 顶部分组 Mode Tabs -->
                 <div class="mode-tabs">
                     <button id="tabGenerate" class="tab-btn active" type="button">生成二维码</button>
                     <button id="tabDecode" class="tab-btn" type="button">识别二维码</button>
                 </div>
 
-                <!-- 1. 生成模式 View -->
                 <div id="generatorSection" class="generator-section">
-                    <!-- 快捷模板 Prompt Chips -->
                     <div class="template-chips">
                         <span class="chip-label">快捷模板:</span>
                         <button class="chip" data-preset="url">网址 URL</button>
@@ -80,7 +77,6 @@
                         <button class="chip" data-preset="contact">名片 (vCard)</button>
                     </div>
 
-                    <!-- 主要二维码文本内容输入框 -->
                     <div class="form-group">
                         <div class="label-row">
                             <label for="qrContentInput">二维码内容 <span class="required">*</span></label>
@@ -90,7 +86,6 @@
                         <button id="clearContentBtn" class="clear-btn" title="清空内容" type="button">&times;</button>
                     </div>
 
-                    <!-- 生成与重置按钮 -->
                     <div class="form-actions">
                         <button id="generateBtn" class="btn btn-primary">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -104,7 +99,6 @@
                         <button id="resetFormBtn" class="btn btn-secondary">重置选项</button>
                     </div>
 
-                    <!-- 备注标题与分类选择 -->
                     <div class="form-group margin-top-sm">
                         <label for="qrTitleInput">记录备注标题 (可选)</label>
                         <input type="text" id="qrTitleInput" placeholder="例如：公司官网 / 房间Wi-Fi" maxlength="40">
@@ -121,7 +115,6 @@
                         </select>
                     </div>
 
-                    <!-- 展开高级设置面板 -->
                     <details class="advanced-settings">
                         <summary>
                             <span>高级外观样式与 Logo 设置</span>
@@ -130,7 +123,6 @@
                             </svg>
                         </summary>
                         <div class="settings-grid">
-                            <!-- 中心 Logo 上传 -->
                             <div class="form-group full-width">
                                 <label>中心 Logo 图标 (可选)</label>
                                 <div class="logo-upload-box">
@@ -141,7 +133,6 @@
                                 </div>
                             </div>
 
-                            <!-- 颜色选择 -->
                             <div class="form-group">
                                 <label for="fgColorInput">前景色 (点阵)</label>
                                 <div class="color-picker-wrapper">
@@ -158,7 +149,6 @@
                                 </div>
                             </div>
 
-                            <!-- 纠错等级 -->
                             <div class="form-group">
                                 <label for="eclSelect" title="纠错等级越高，损坏或覆盖Logo时越容易识别">
                                     纠错等级 (ECL)
@@ -171,7 +161,6 @@
                                 </select>
                             </div>
 
-                            <!-- 点阵尺寸与边距 -->
                             <div class="form-group">
                                 <div class="label-row">
                                     <label for="cellSizeInput">点阵尺寸</label>
@@ -191,9 +180,7 @@
                     </details>
                 </div>
 
-                <!-- 2. 解码识别模式 View -->
                 <div id="decoderSection" class="decoder-section" style="display: none;">
-                    <!-- 摄像头扫描控制条 -->
                     <div class="camera-control-bar">
                         <button id="toggleCameraBtn" class="btn btn-outline" type="button">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -204,7 +191,6 @@
                         </button>
                     </div>
 
-                    <!-- 摄像头视频渲染视口 (默认隐藏) -->
                     <div id="cameraViewport" class="camera-viewport" style="display: none;">
                         <video id="cameraVideo" autoplay playsinline muted></video>
                         <div class="scanner-overlay">
@@ -215,7 +201,6 @@
                         <button id="closeCameraBtn" class="close-camera-btn" title="关闭摄像头" type="button">&times;</button>
                     </div>
 
-                    <!-- 拖拽/点击文件上传区 -->
                     <div class="drop-zone" id="dropZone">
                         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -230,7 +215,6 @@
                         <input type="file" id="decodeFileInput" accept="image/*" style="display: none;">
                     </div>
 
-                    <!-- 识别出的结果展示框 -->
                     <div id="decodeResultCard" class="decode-result-card" style="display: none;">
                         <div class="result-header">
                             <span class="badge badge-primary">识别文本内容</span>
@@ -246,7 +230,6 @@
                 </div>
             </section>
 
-            <!-- 中间：二维码实时预览视口 -->
             <section class="panel-card preview-panel">
                 <div class="panel-header">
                     <h2>实时二维码预览</h2>
@@ -255,7 +238,6 @@
 
                 <div id="qrViewport" class="qr-viewport">
                     <div id="qrCanvasContainer" class="canvas-container">
-                        <!-- 动态生成的 Canvas/SVG 挂载位置 -->
                         <div id="emptyPreview" class="empty-state">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -267,7 +249,6 @@
                         </div>
                     </div>
 
-                    <!-- 二维码元数据信息 -->
                     <div id="qrMetaInfo" class="qr-meta-info" style="display: none;">
                         <span id="metaSizeTag">尺寸: --</span>
                         <span id="metaEclTag">容错率: --</span>
@@ -275,7 +256,6 @@
                     </div>
                 </div>
 
-                <!-- 二维码导出与操作区 -->
                 <div class="export-actions">
                     <button id="downloadPngBtn" class="btn btn-primary" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -291,7 +271,6 @@
                 </div>
             </section>
 
-            <!-- 右侧：本地历史记录列表 -->
             <section class="panel-card history-panel">
                 <div class="panel-header">
                     <h2>
@@ -306,7 +285,6 @@
                     </div>
                 </div>
 
-                <!-- 历史分类标签筛选芯片 -->
                 <div class="category-chips" id="categoryFilterBar">
                     <button class="cat-chip active" data-cat="all">全部</button>
                     <button class="cat-chip" data-cat="favorite">⭐ 收藏</button>
@@ -316,7 +294,6 @@
                     <button class="cat-chip" data-cat="test">🧪 测试</button>
                 </div>
 
-                <!-- 历史搜索栏 -->
                 <div class="search-box">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/>
@@ -326,7 +303,6 @@
                     <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">&times;</button>
                 </div>
 
-                <!-- 滚动历史卡片容器 -->
                 <div class="history-list-wrapper">
                     <div id="historyList" class="history-list"></div>
                     <div id="emptyHistory" class="empty-history">
@@ -335,7 +311,6 @@
                     </div>
                 </div>
 
-                <!-- 历史管理底部操作 -->
                 <div class="history-footer">
                     <span id="historyCountText">已保存 0 条记录</span>
                     <button id="exportHistoryBtn" class="btn-link">导出 JSON</button>
@@ -347,13 +322,13 @@
         </main>
     </div>
 
-    <!-- 依赖库与通用业务模块 -->
-    <script src="../common/lib/qrcode.min.js"></script>
-    <script src="../common/lib/jsqr.min.js"></script>
-    <script src="../common/js/storage-adapter.js"></script>
-    <script src="../common/js/qr-engine.js"></script>
-    <script src="../common/js/ui-toast.js"></script>
-    <script src="../common/js/ui-history.js"></script>
+    <!-- 依赖库与通用业务模块 (在扩展根目录下统一相对路径) -->
+    <script src="common/lib/qrcode.min.js"></script>
+    <script src="common/lib/jsqr.min.js"></script>
+    <script src="common/js/storage-adapter.js"></script>
+    <script src="common/js/qr-engine.js"></script>
+    <script src="common/js/ui-toast.js"></script>
+    <script src="common/js/ui-history.js"></script>
     <!-- Extension 专用应用控制器 -->
     <script src="js/app-ext.js"></script>
 </body>

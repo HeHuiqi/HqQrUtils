@@ -5,7 +5,6 @@
 
 set -e
 
-# 获取脚本所在的根目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build/web"
@@ -23,12 +22,5 @@ cp -r "$ROOT_DIR/common/"* "$BUILD_DIR/common/"
 # 3. 复制 Web 入口文件
 echo "📄 正在处理 web/ 入口网页..."
 cp "$ROOT_DIR/web/index.html" "$BUILD_DIR/index.html"
-
-# 4. 修正相对路径依赖 (../common/ -> common/)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' 's/\.\.\/common\//common\//g' "$BUILD_DIR/index.html"
-else
-    sed -i 's/\.\.\/common\//common\//g' "$BUILD_DIR/index.html"
-fi
 
 echo "✅ [Build Web] 打包完成！独立运行包目录: $BUILD_DIR"
