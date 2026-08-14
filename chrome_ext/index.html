@@ -3,41 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HQ 二维码生成与识别工具箱 (Chrome Extension)</title>
-    <!-- 基础与通用样式模块 -->
+    <meta name="description" content="功能强大的在线二维码生成工具，支持自定义颜色、容错率，自动本地保存生成记录，点击记录可再次显示与编辑。">
+    <title>二维码生成器 - 支持本地记录与历史回显</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-light">
-    <!-- 全局 Toast 通知容器 -->
-    <div id="toastContainer" class="toast-container"></div>
-
     <div class="app-container">
-        <!-- 顶部 Header 导航栏 -->
+        <!-- 头部 Navigation / Header -->
         <header class="app-header">
-            <div class="brand">
-                <svg class="logo-icon" width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="2" width="28" height="28" rx="8" fill="#2563EB"/>
-                    <rect x="7" y="7" width="7" height="7" rx="1.5" fill="#FFFFFF"/>
-                    <rect x="18" y="7" width="7" height="7" rx="1.5" fill="#FFFFFF"/>
-                    <rect x="7" y="18" width="7" height="7" rx="1.5" fill="#FFFFFF"/>
-                    <circle cx="19.5" cy="19.5" r="1.5" fill="#FFFFFF"/>
-                    <circle cx="23.5" cy="19.5" r="1.5" fill="#FFFFFF"/>
-                    <circle cx="19.5" cy="23.5" r="1.5" fill="#FFFFFF"/>
-                    <circle cx="23.5" cy="23.5" r="1.5" fill="#FFFFFF"/>
-                </svg>
-                <div class="brand-text">
-                    <h1>HQ 二维码与工具箱</h1>
-                    <span class="sub-title">Chrome 扩展版 · 本地存储保护</span>
-                </div>
-            </div>
-            <div class="header-actions">
-                <span class="storage-badge" title="数据使用 chrome.storage.local 安全存储">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <div class="header-brand">
+                <div class="brand-logo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                        <circle cx="16" cy="16" r="0.75" fill="currentColor" stroke="none"/>
+                        <circle cx="19" cy="16" r="0.75" fill="currentColor" stroke="none"/>
+                        <circle cx="16" cy="19" r="0.75" fill="currentColor" stroke="none"/>
+                        <circle cx="19" cy="19" r="0.75" fill="currentColor" stroke="none"/>
                     </svg>
-                    扩展安全存储
+                </div>
+                <h1 class="brand-title">二维码生成器</h1>
+            </div>
+
+            <div class="header-actions">
+                <span class="storage-badge" id="storageStatus" title="本地数据存储状态">
+                    <span id="historyCountText">已保存 0 条记录</span>
                 </span>
-                <button id="themeToggleBtn" class="icon-btn" title="切换深色/浅色主题">
+
+                <button id="themeToggleBtn" class="icon-btn" title="切换深色/浅色主题" aria-label="切换主题">
                     <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"/>
                         <line x1="12" y1="1" x2="12" y2="3"/>
@@ -49,50 +48,72 @@
                         <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
                         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                     </svg>
+                    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
                 </button>
             </div>
         </header>
 
-        <!-- 主内容区域：三栏响应式网格 -->
+        <!-- 主内容区 Main Layout -->
         <main class="main-layout">
-            <!-- 左侧：模式选择与表单卡片 -->
-            <section class="panel-card input-panel">
-                <div class="mode-tabs">
-                    <button id="tabGenerate" class="tab-btn active" type="button">生成二维码</button>
-                    <button id="tabDecode" class="tab-btn" type="button">识别二维码</button>
+            <!-- 左侧：输入与设置区域 -->
+            <section class="panel-card generator-panel">
+                <div class="panel-header">
+                    <div class="mode-tabs">
+                        <button id="tabGenerate" class="tab-btn active" type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            生成二维码
+                        </button>
+                        <button id="tabDecode" class="tab-btn" type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            识别二维码
+                        </button>
+                    </div>
                 </div>
 
+                <!-- 1. 生成模式 View -->
                 <div id="generatorSection" class="generator-section">
-                    <div class="template-chips">
-                        <span class="chip-label">快捷模板:</span>
-                        <button class="chip" data-preset="url">网址 URL</button>
-                        <button class="chip" data-preset="wifi">Wi-Fi 连接</button>
-                        <button class="chip" data-preset="text">纯文本</button>
-                        <button class="chip" data-preset="contact">名片 (vCard)</button>
+                    <!-- 模板预设按钮 -->
+                    <div class="preset-chips">
+                        <span class="preset-label">快捷模板:</span>
+                        <button class="chip" data-preset="url">🌐 网址</button>
+                        <button class="chip" data-preset="wifi">📶 Wi-Fi</button>
+                        <button class="chip" data-preset="text">📝 纯文本</button>
+                        <button class="chip" data-preset="contact">👤 名片</button>
                     </div>
 
+                    <!-- 文本内容输入框 -->
                     <div class="form-group">
-                        <div class="label-row">
-                            <label for="qrContentInput">二维码内容 <span class="required">*</span></label>
-                            <span id="charCounter" class="char-counter">字符数: 0</span>
+                        <label for="qrContentInput">二维码文本或链接内容 <span class="required">*</span></label>
+                        <div class="textarea-wrapper">
+                            <textarea id="qrContentInput" placeholder="请输入任意文本、网址链接或字符..." rows="3"></textarea>
+                            <button id="clearContentBtn" class="clear-input-btn" title="清空内容" type="button">&times;</button>
                         </div>
-                        <textarea id="qrContentInput" placeholder="输入任意文本、网页 URL、Wi-Fi 配置或名片信息..." rows="4"></textarea>
-                        <button id="clearContentBtn" class="clear-btn" title="清空内容" type="button">&times;</button>
+                        <div class="input-hint">
+                            <span id="charCounter">字符数: 0</span>
+                            <span>自动实时预览</span>
+                        </div>
                     </div>
 
+                    <!-- 操作按钮：直接放在输入框的下面 -->
                     <div class="form-actions">
                         <button id="generateBtn" class="btn btn-primary">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="3" width="7" height="7"/>
-                                <rect x="14" y="3" width="7" height="7"/>
-                                <rect x="3" y="14" width="7" height="7"/>
-                                <path d="M14 14h3v3h-3z"/>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                             </svg>
                             生成并保存记录
                         </button>
                         <button id="resetFormBtn" class="btn btn-secondary">重置选项</button>
                     </div>
 
+                    <!-- 备注标题与分类选择 -->
                     <div class="form-group margin-top-sm">
                         <label for="qrTitleInput">记录备注标题 (可选)</label>
                         <input type="text" id="qrTitleInput" placeholder="例如：公司官网 / 房间Wi-Fi" maxlength="40">
@@ -109,72 +130,76 @@
                         </select>
                     </div>
 
+                    <!-- 展开高级设置面板 -->
                     <details class="advanced-settings">
                         <summary>
-                            <span>高级外观样式与 Logo 设置</span>
-                            <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <span>🎨 样式与高级参数设置</span>
+                            <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="6 9 12 15 18 9"/>
                             </svg>
                         </summary>
-                        <div class="settings-grid">
-                            <div class="form-group full-width">
-                                <label>中心 Logo 图标 (可选)</label>
-                                <div class="logo-upload-box">
-                                    <button id="uploadLogoBtn" class="btn btn-outline small" type="button">选择 Logo 图片</button>
-                                    <span id="logoFileName" class="sub-text">未选择图片</span>
-                                    <button id="removeLogoBtn" class="text-btn danger" style="display: none;" type="button">移除</button>
-                                    <input type="file" id="logoFileInput" accept="image/*" style="display: none;">
-                                </div>
-                            </div>
 
-                            <div class="form-group">
+                        <div class="settings-grid">
+                            <!-- 前景色 -->
+                            <div class="form-group inline">
                                 <label for="fgColorInput">前景色 (点阵)</label>
                                 <div class="color-picker-wrapper">
                                     <input type="color" id="fgColorInput" value="#0f172a">
-                                    <input type="text" id="fgHexInput" value="#0f172a" maxlength="7">
+                                    <input type="text" id="fgHexInput" class="hex-text" value="#0f172a">
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="bgColorInput">背景颜色</label>
+                            <!-- 背景色 -->
+                            <div class="form-group inline">
+                                <label for="bgColorInput">背景色</label>
                                 <div class="color-picker-wrapper">
                                     <input type="color" id="bgColorInput" value="#ffffff">
-                                    <input type="text" id="bgHexInput" value="#ffffff" maxlength="7">
+                                    <input type="text" id="bgHexInput" class="hex-text" value="#ffffff">
                                 </div>
                             </div>
 
+                            <!-- 容错率 -->
                             <div class="form-group">
-                                <label for="eclSelect" title="纠错等级越高，损坏或覆盖Logo时越容易识别">
-                                    纠错等级 (ECL)
-                                </label>
+                                <label for="eclSelect">纠错等级 (ECL)</label>
                                 <select id="eclSelect">
-                                    <option value="L">L (7% 容错率)</option>
-                                    <option value="M" selected>M (15% 容错率)</option>
-                                    <option value="Q">Q (25% 容错率)</option>
-                                    <option value="H">H (30% 容错率)</option>
+                                    <option value="L">L - 7% 容错 (小尺寸/高密文本)</option>
+                                    <option value="M" selected>M - 15% 容错 (推荐标准)</option>
+                                    <option value="Q">Q - 25% 容错 (较高抗损毁)</option>
+                                    <option value="H">H - 30% 容错 (最高容错)</option>
                                 </select>
                             </div>
 
+                            <!-- 点阵大小 -->
                             <div class="form-group">
-                                <div class="label-row">
-                                    <label for="cellSizeInput">点阵尺寸</label>
-                                    <span id="cellSizeVal" class="val-tag">8px</span>
-                                </div>
-                                <input type="range" id="cellSizeInput" min="3" max="16" value="8">
+                                <label for="cellSizeInput">点阵尺寸: <span id="cellSizeVal">8px</span></label>
+                                <input type="range" id="cellSizeInput" min="3" max="16" value="8" step="1">
                             </div>
 
-                            <div class="form-group">
-                                <div class="label-row">
-                                    <label for="marginInput">留白边距 (Quiet Zone)</label>
-                                    <span id="marginVal" class="val-tag">4</span>
+                            <!-- 中心 Logo 图片 -->
+                            <div class="form-group full-width">
+                                <label for="logoFileInput">中心 Logo 图标 (可选)</label>
+                                <div class="logo-upload-row">
+                                    <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
+                                    <button id="uploadLogoBtn" class="btn btn-outline small" type="button">
+                                        🖼️ 上传 Logo 图片
+                                    </button>
+                                    <span id="logoFileName" class="logo-file-name">未选择图片</span>
+                                    <button id="removeLogoBtn" class="clear-input-btn" title="移除 Logo" type="button" style="display:none;">&times;</button>
                                 </div>
-                                <input type="range" id="marginInput" min="0" max="10" value="4">
+                            </div>
+
+                            <!-- 边距 -->
+                            <div class="form-group full-width">
+                                <label for="marginInput">留白边距 (Quiet Zone): <span id="marginVal">4</span></label>
+                                <input type="range" id="marginInput" min="0" max="10" value="4" step="1">
                             </div>
                         </div>
                     </details>
                 </div>
 
+                <!-- 2. 解码识别模式 View -->
                 <div id="decoderSection" class="decoder-section" style="display: none;">
+                    <!-- 摄像头扫描控制条 -->
                     <div class="camera-control-bar">
                         <button id="toggleCameraBtn" class="btn btn-outline" type="button">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -185,6 +210,7 @@
                         </button>
                     </div>
 
+                    <!-- 摄像头视频渲染视口 (默认隐藏) -->
                     <div id="cameraViewport" class="camera-viewport" style="display: none;">
                         <video id="cameraVideo" autoplay playsinline muted></video>
                         <div class="scanner-overlay">
@@ -195,6 +221,7 @@
                         <button id="closeCameraBtn" class="close-camera-btn" title="关闭摄像头" type="button">&times;</button>
                     </div>
 
+                    <!-- 拖拽/点击文件上传区 -->
                     <div class="drop-zone" id="dropZone">
                         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -209,6 +236,7 @@
                         <input type="file" id="decodeFileInput" accept="image/*" style="display: none;">
                     </div>
 
+                    <!-- 识别出的结果展示框 -->
                     <div id="decodeResultCard" class="decode-result-card" style="display: none;">
                         <div class="result-header">
                             <span class="badge badge-primary">识别文本内容</span>
@@ -224,34 +252,45 @@
                 </div>
             </section>
 
+            <!-- 中间/右侧：当前二维码展示区 -->
             <section class="panel-card preview-panel">
                 <div class="panel-header">
-                    <h2>实时二维码预览</h2>
-                    <span id="activeRecordTag" class="active-tag">新建生成</span>
+                    <h2>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        二维码预览
+                    </h2>
+                    <span class="active-record-tag" id="activeRecordTag">新建生成</span>
                 </div>
 
-                <div id="qrViewport" class="qr-viewport">
-                    <div id="qrCanvasContainer" class="canvas-container">
-                        <div id="emptyPreview" class="empty-state">
+                <div class="preview-viewport">
+                    <div id="qrCanvasContainer" class="qr-container">
+                        <!-- Canvas 或 SVG 动态生成注入位置 -->
+                        <div class="empty-preview" id="emptyPreview">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <rect x="3" y="3" width="18" height="18" rx="2"/>
                                 <path d="M7 7h3v3H7z"/>
                                 <path d="M14 7h3v3h-3z"/>
                                 <path d="M7 14h3v3H7z"/>
+                                <path d="M14 14h3v3h-3z"/>
                             </svg>
-                            <p>输入内容后自动呈现二维码 preview</p>
+                            <p>输入内容或点击左侧/历史记录生成二维码</p>
                         </div>
                     </div>
 
-                    <div id="qrMetaInfo" class="qr-meta-info" style="display: none;">
-                        <span id="metaSizeTag">尺寸: --</span>
-                        <span id="metaEclTag">容错率: --</span>
-                        <span id="metaTimeTag">时间: --</span>
+                    <!-- 动态尺寸与信息展示 -->
+                    <div class="qr-meta-info" id="qrMetaInfo" style="display: none;">
+                        <span class="meta-tag" id="metaSizeTag">尺寸: -</span>
+                        <span class="meta-tag" id="metaEclTag">容错: -</span>
+                        <span class="meta-tag" id="metaTimeTag">生成时间: -</span>
                     </div>
                 </div>
 
-                <div class="export-actions">
-                    <button id="downloadPngBtn" class="btn btn-primary" disabled>
+                <!-- 导出与复制快捷工具栏 -->
+                <div class="preview-actions" id="previewActions">
+                    <button id="downloadPngBtn" class="btn btn-success" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                             <polyline points="7 10 12 15 17 10"/>
@@ -259,12 +298,23 @@
                         </svg>
                         下载 PNG
                     </button>
-                    <button id="downloadSvgBtn" class="btn btn-outline" disabled>下载 SVG</button>
-                    <button id="copyImageBtn" class="btn btn-outline" disabled>复制图片</button>
-                    <button id="copyTextBtn" class="btn btn-outline" disabled>复制文本</button>
+                    <button id="downloadSvgBtn" class="btn btn-outline" disabled>
+                        下载 SVG
+                    </button>
+                    <button id="copyImageBtn" class="btn btn-outline" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        复制图片
+                    </button>
+                    <button id="copyTextBtn" class="btn btn-outline" disabled>
+                        复制文本
+                    </button>
                 </div>
             </section>
 
+            <!-- 右侧：本地历史记录列表 -->
             <section class="panel-card history-panel">
                 <div class="panel-header">
                     <h2>
@@ -279,6 +329,7 @@
                     </div>
                 </div>
 
+                <!-- 历史分类标签筛选芯片 -->
                 <div class="category-chips" id="categoryFilterBar">
                     <button class="cat-chip active" data-cat="all">全部</button>
                     <button class="cat-chip" data-cat="favorite">⭐ 收藏</button>
@@ -288,42 +339,54 @@
                     <button class="cat-chip" data-cat="test">🧪 测试</button>
                 </div>
 
+                <!-- 历史搜索栏 -->
                 <div class="search-box">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input type="text" id="historySearchInput" placeholder="搜索历史内容或备注标题...">
+                    <input type="text" id="historySearchInput" placeholder="搜索历史文本或标题...">
                     <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">&times;</button>
                 </div>
 
+                <!-- 历史记录滚动列表 -->
                 <div class="history-list-wrapper">
-                    <div id="historyList" class="history-list"></div>
-                    <div id="emptyHistory" class="empty-history">
-                        <p>暂无历史生成记录</p>
-                        <span class="sub-text">在左侧输入并“生成”后将自动记录到此处</span>
+                    <div id="historyList" class="history-list">
+                        <!-- JS 动态渲染列表项 -->
+                    </div>
+                    <!-- 历史记录为空的占位 -->
+                    <div class="empty-history" id="emptyHistory" style="display: none;">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 8v4l3 3"/>
+                            <circle cx="12" cy="12" r="9"/>
+                        </svg>
+                        <p>暂无保存的历史记录</p>
+                        <span class="sub-text">点击“生成并保存记录”即可自动记录至本地</span>
                     </div>
                 </div>
 
+                <!-- 导入与导出操作 -->
                 <div class="history-footer">
-                    <span id="historyCountText">已保存 0 条记录</span>
-                    <button id="exportHistoryBtn" class="btn-link">导出 JSON</button>
+                    <button id="exportHistoryBtn" class="btn-link">导出数据 (.json)</button>
                     <span class="divider">|</span>
-                    <button id="importHistoryBtn" class="btn-link">导入 JSON</button>
+                    <button id="importHistoryBtn" class="btn-link">导入数据</button>
                     <input type="file" id="importFileInput" accept=".json" style="display: none;">
                 </div>
             </section>
         </main>
+
+        <!-- 全局 Toast 消息提示框 -->
+        <div id="toastContainer" class="toast-container" aria-live="polite"></div>
     </div>
 
-    <!-- 依赖库与通用业务模块 -->
+    <!-- 依赖库与功能模块 -->
     <script src="lib/qrcode.min.js"></script>
     <script src="lib/jsqr.min.js"></script>
-    <script src="js/storage-adapter.js"></script>
+    <script src="js/storage.js"></script>
     <script src="js/qr-engine.js"></script>
     <script src="js/ui-toast.js"></script>
     <script src="js/ui-history.js"></script>
-    <!-- Extension 专用应用控制器 -->
-    <script src="js/app-ext.js"></script>
+    <!-- 主应用控制器 -->
+    <script src="js/app.js"></script>
 </body>
 </html>

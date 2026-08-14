@@ -1,5 +1,5 @@
 /**
- * 历史记录 UI 管理模块 (HistoryUIManager) - Common
+ * 历史记录 UI 管理模块 (HistoryUIManager) - 支持星标收藏与分类筛选
  */
 
 (function (window) {
@@ -13,6 +13,14 @@
     };
 
     const HistoryUIManager = {
+        /**
+         * 渲染历史记录列表
+         * @param {Array} records 记录列表
+         * @param {String} activeRecordId 当前激活的 ID
+         * @param {String} filterKeyword 搜索关键词
+         * @param {String} currentCategory 当前选中的分类 ('all' | 'favorite' | 'work' | ...)
+         * @param {Object} handlers 事件回调 { onSelectRecord, onDeleteRecord, onCopyContent, onToggleFavorite }
+         */
         renderList(records, activeRecordId, filterKeyword, currentCategory, handlers) {
             const listEl = document.getElementById('historyList');
             const emptyEl = document.getElementById('emptyHistory');
@@ -22,13 +30,16 @@
 
             const keyword = (filterKeyword || '').toLowerCase().trim();
 
+            // 1. 过滤算法
             let filtered = records.filter(item => {
+                // 关键词搜索
                 const matchKeyword = !keyword ||
                     (item.title && item.title.toLowerCase().includes(keyword)) ||
                     (item.content && item.content.toLowerCase().includes(keyword));
 
                 if (!matchKeyword) return false;
 
+                // 分类与星标筛选
                 if (currentCategory === 'favorite') {
                     return !!item.isFavorite;
                 } else if (currentCategory && currentCategory !== 'all') {
@@ -37,6 +48,7 @@
                 return true;
             });
 
+            // 2. 排序策略：星标收藏置顶 (isFavorite)，其次按时间最新排序
             filtered.sort((a, b) => {
                 const favA = a.isFavorite ? 1 : 0;
                 const favB = b.isFavorite ? 1 : 0;
@@ -64,11 +76,15 @@
             }
         },
 
+        /**
+         * 创建单条历史卡片 DOM 节点
+         */
         createItemCard(record, isActive, handlers) {
             const card = document.createElement('div');
             card.className = `history-item ${isActive ? 'active' : ''} ${record.isFavorite ? 'favorite-item' : ''}`;
             card.dataset.id = record.id;
 
+            // 缩略图
             const thumbContainer = document.createElement('div');
             thumbContainer.className = 'history-thumb';
             try {
@@ -85,6 +101,7 @@
                 thumbContainer.innerHTML = '🔳';
             }
 
+            // 详情
             const details = document.createElement('div');
             details.className = 'history-details';
 
@@ -95,6 +112,7 @@
             titleText.textContent = record.title || record.content;
             title.appendChild(titleText);
 
+            // 分类 Pill 标签
             if (record.category && record.category !== 'none' && CATEGORY_NAMES[record.category]) {
                 const catPill = document.createElement('span');
                 catPill.className = 'cat-badge-pill';
@@ -118,9 +136,11 @@
             details.appendChild(snippet);
             details.appendChild(meta);
 
+            // 操作按钮区
             const actions = document.createElement('div');
             actions.className = 'history-actions';
 
+            // ⭐ 星标收藏按钮
             const starBtn = document.createElement('button');
             starBtn.className = `item-action-btn star ${record.isFavorite ? 'starred' : ''}`;
             starBtn.title = record.isFavorite ? '取消收藏' : '星标收藏置顶';
@@ -130,6 +150,7 @@
                 if (handlers.onToggleFavorite) handlers.onToggleFavorite(record.id);
             });
 
+            // 快捷复制文本按钮
             const copyBtn = document.createElement('button');
             copyBtn.className = 'item-action-btn';
             copyBtn.title = '复制文本';
@@ -144,6 +165,7 @@
                 if (handlers.onCopyContent) handlers.onCopyContent(record.content);
             });
 
+            // 删除按钮
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'item-action-btn delete';
             deleteBtn.title = '删除记录';
@@ -166,6 +188,7 @@
             card.appendChild(details);
             card.appendChild(actions);
 
+            // 点击查看回显
             card.addEventListener('click', () => {
                 if (handlers.onSelectRecord) handlers.onSelectRecord(record);
             });
@@ -173,6 +196,9 @@
             return card;
         },
 
+        /**
+         * 相对时间格式化
+         */
         formatTime(timestamp) {
             if (!timestamp) return '';
             const d = new Date(timestamp);

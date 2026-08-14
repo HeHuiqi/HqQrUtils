@@ -1,5 +1,5 @@
 /**
- * Toast 提示框 UI 模块 (ToastManager) - Common
+ * Toast 提示框 UI 模块 (ToastManager)
  */
 
 (function (window) {

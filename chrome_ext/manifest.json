@@ -1,26 +1,26 @@
 {
   "manifest_version": 3,
-  "name": "HQ 二维码与工具箱",
-  "version": "1.1.0",
-  "description": "离线二维码生成、自定义点阵配色、居中 Logo、图片与摄像头实时解码、右键一键快捷生成",
-  "permissions": [
-    "storage",
-    "contextMenus"
-  ],
-  "background": {
-    "service_worker": "background.js"
+  "name": "HQ 二维码生成器",
+  "version": "1.0.0",
+  "description": "功能强大的二维码生成与本地历史记录管理工具，支持自定义样式、导出与离线使用。",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "打开 HQ 二维码生成与识别工具",
+    "default_title": "打开二维码生成器",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "contextMenus"
+  ]
 }
