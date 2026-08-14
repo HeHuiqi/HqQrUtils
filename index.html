@@ -188,8 +188,31 @@
 
                 <!-- 2. 解码识别模式 View -->
                 <div id="decoderSection" class="decoder-section" style="display: none;">
+                    <!-- 摄像头扫描控制条 -->
+                    <div class="camera-control-bar">
+                        <button id="toggleCameraBtn" class="btn btn-outline" type="button">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                            <span id="cameraBtnText">开启摄像头扫描</span>
+                        </button>
+                    </div>
+
+                    <!-- 摄像头视频渲染视口 (默认隐藏) -->
+                    <div id="cameraViewport" class="camera-viewport" style="display: none;">
+                        <video id="cameraVideo" autoplay playsinline muted></video>
+                        <div class="scanner-overlay">
+                            <div class="scanner-frame">
+                                <div class="scanner-line"></div>
+                            </div>
+                        </div>
+                        <button id="closeCameraBtn" class="close-camera-btn" title="关闭摄像头" type="button">&times;</button>
+                    </div>
+
+                    <!-- 拖拽/点击文件上传区 -->
                     <div class="drop-zone" id="dropZone">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <rect x="3" y="3" width="18" height="18" rx="2"/>
                             <path d="M7 7h3v3H7z"/>
                             <path d="M14 7h3v3h-3z"/>

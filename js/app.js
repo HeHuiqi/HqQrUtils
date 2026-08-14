@@ -10,6 +10,9 @@
     let activeRecordId = null;
     let autoPreviewTimer = null;
     let currentLogoImage = null;
+    let cameraStream = null;
+    let cameraScanInterval = null;
+    let isCameraActive = false;
 
     // DOM Cache
     const DOM = {
@@ -18,6 +21,13 @@
         tabDecode: document.getElementById('tabDecode'),
         generatorSection: document.getElementById('generatorSection'),
         decoderSection: document.getElementById('decoderSection'),
+
+        // Camera Controls
+        toggleCameraBtn: document.getElementById('toggleCameraBtn'),
+        cameraBtnText: document.getElementById('cameraBtnText'),
+        cameraViewport: document.getElementById('cameraViewport'),
+        cameraVideo: document.getElementById('cameraVideo'),
+        closeCameraBtn: document.getElementById('closeCameraBtn'),
 
         // Form Inputs
         qrContentInput: document.getElementById('qrContentInput'),
@@ -115,6 +125,7 @@
     // --- 模式切换（生成 vs 解码识别）---
     function switchMode(mode) {
         if (mode === 'generate') {
+            stopCameraScan(); // 切换回生成模式时自动关闭摄像头释放资源
             DOM.tabGenerate.classList.add('active');
             DOM.tabDecode.classList.remove('active');
             DOM.generatorSection.style.display = 'block';
@@ -124,6 +135,73 @@
             DOM.tabGenerate.classList.remove('active');
             DOM.decoderSection.style.display = 'flex';
             DOM.generatorSection.style.display = 'none';
+        }
+    }
+
+    // --- 摄像头实时扫描逻辑 ---
+    async function startCameraScan() {
+        if (isCameraActive) {
+            stopCameraScan();
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+
+            cameraStream = stream;
+            DOM.cameraVideo.srcObject = stream;
+            DOM.cameraVideo.setAttribute('playsinline', true);
+            await DOM.cameraVideo.play();
+
+            isCameraActive = true;
+            DOM.cameraViewport.style.display = 'flex';
+            DOM.cameraBtnText.textContent = '关闭摄像头扫描';
+            ToastManager.show('已开启摄像头，请将二维码放入对焦框中', 'info');
+
+            // 启动实时帧扫描循环 (每 150ms 轮询检测一帧)
+            clearInterval(cameraScanInterval);
+            cameraScanInterval = setInterval(async () => {
+                if (!isCameraActive || DOM.cameraVideo.paused || DOM.cameraVideo.ended) return;
+
+                try {
+                    const decodedText = await QREngine.decodeVideo(DOM.cameraVideo);
+                    if (decodedText) {
+                        stopCameraScan();
+                        showDecodeResult(decodedText);
+                        ToastManager.show('实时扫码识别成功！', 'success');
+                    }
+                } catch (e) {
+                    // Ignore transient frame errors
+                }
+            }, 150);
+
+        } catch (err) {
+            console.error('Camera Access Error:', err);
+            ToastManager.show('无法开启摄像头：' + (err.message || '权限被拒绝或设备无摄像头'), 'error');
+            stopCameraScan();
+        }
+    }
+
+    function stopCameraScan() {
+        isCameraActive = false;
+        clearInterval(cameraScanInterval);
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+
+        if (DOM.cameraVideo) {
+            DOM.cameraVideo.srcObject = null;
+        }
+
+        if (DOM.cameraViewport) {
+            DOM.cameraViewport.style.display = 'none';
+        }
+        if (DOM.cameraBtnText) {
+            DOM.cameraBtnText.textContent = '开启摄像头扫描';
         }
     }
 
@@ -455,6 +533,10 @@
         // 模式切换 Tab
         DOM.tabGenerate.addEventListener('click', () => switchMode('generate'));
         DOM.tabDecode.addEventListener('click', () => switchMode('decode'));
+
+        // 摄像头扫描事件
+        DOM.toggleCameraBtn.addEventListener('click', startCameraScan);
+        DOM.closeCameraBtn.addEventListener('click', stopCameraScan);
 
         // 主题切换
         DOM.themeToggleBtn.addEventListener('click', toggleTheme);

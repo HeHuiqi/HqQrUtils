@@ -124,6 +124,44 @@
         },
 
         /**
+         * 实时检测视频流 (<video> 元素) 中的二维码
+         * @param {HTMLVideoElement} videoElement
+         * @returns {Promise<string | null>} 识别出的字符串或 null
+         */
+        async decodeVideo(videoElement) {
+            if (!videoElement || videoElement.readyState < 2) return null;
+
+            // 1. 优先尝试原生 BarcodeDetector (硬件极速级)
+            if ('BarcodeDetector' in window) {
+                try {
+                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                    const results = await detector.detect(videoElement);
+                    if (results && results.length > 0) {
+                        return results[0].rawValue;
+                    }
+                } catch (e) {
+                    // 降级回退
+                }
+            }
+
+            // 2. 回退使用 jsQR 逐帧分析
+            if (typeof jsQR !== 'undefined' && videoElement.videoWidth > 0) {
+                const canvas = document.createElement('canvas');
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code && code.data) {
+                    return code.data;
+                }
+            }
+
+            return null;
+        },
+
+        /**
          * 获取容错百分比说明
          */
         getEclPercentage(ecl) {
