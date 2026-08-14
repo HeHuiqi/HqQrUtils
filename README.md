@@ -1,6 +1,6 @@
-# HQ 二维码生成与历史记录管理工具 (Chrome Extension & Web)
+# HQ 二维码生成与历史记录管理工具 (Web & Chrome Extension & Android Native App)
 
-一个功能强大、设计现代、全离线运行的二维码生成与本地历史记录管理工具。既可作为单页 Web 应用运行，也完全支持作为 **Chrome 浏览器扩展程序 (Manifest V3)** 使用——点击扩展图标即可在全新标签页中直接开启应用。
+一个功能强大、设计现代、全离线运行的二维码生成与历史记录管理工具。采用 Monorepo 多端架构设计，完美支持作为 **Web 网页端**、**Chrome 浏览器扩展程序 (Manifest V3)** 以及 **Android 原生 App (Kotlin + CameraX + ML Kit)** 跨平台运行。
 
 ![HQ QR Utils Banner](icons/icon128.png)
 
@@ -8,133 +8,88 @@
 
 ## 🌟 核心功能亮点
 
-1. **二维码生成与多样式自定义**
-   - **多格式支持**：内置网址 URL、Wi-Fi 热点连接、纯文本、电子名片 (vCard) 等快捷模板。
-   - **外观定制**：支持自由选择前景色 (点阵) 与背景色、纠错等级 (L: 7%, M: 15%, Q: 25%, H: 30%)、点阵尺寸 (3px-16px) 及留白边距 (Quiet Zone)。
-   - **中心 Logo 嵌入**：支持上传自定义 Logo 图片置于二维码中央，自动开启最高容错率 (H-30%) 隔离绘制，保证 100% 完美扫描。
-   - **实时预览**：输入文本自动防抖预览，即时反馈效果。
+### 1. 🎨 二维码生成与多样式自定义
+- **多格式支持**：内置网址 URL、Wi-Fi 热点连接、纯文本、电子名片 (vCard) 等快捷模板。
+- **外观定制**：支持自由选择前景色 (点阵) 与背景色、纠错等级 (L: 7%, M: 15%, Q: 25%, H: 30%)、点阵尺寸 (3px-16px) 及留白边距 (Quiet Zone)。
+- **中心 Logo 嵌入**：支持上传自定义 Logo 图片置于二维码中央，自动开启最高容错率 (H-30%) 隔离绘制，保证 100% 完美扫描。
+- **实时预览**：输入文本自动防抖预览，即时反馈效果。
 
-2. **二维码识别与解码 (QR Code Decoder)**
-   - **图片识别**：支持切换至“识别二维码”模式，拖拽图片文件、点击上传或使用键盘快捷键 `Ctrl+V` / `Cmd+V` 粘贴截图识别。
-   - **高效解析**：内置 Chrome 原生 `BarcodeDetector` 与离线解析双引擎，秒级解析出文本或网页链接。
-   - **一键联动**：识别结果支持一键复制文本、直接在新标签页打开链接、或一键导入生成器重新设计。
+### 2. 🔍 二维码识别与解码 (QR Code Decoder)
+- **多引擎优化**：内置 `QREngine` 多尺度降采样算法 (最高 800px 大图自动降采样)，支持 12MP+ 手机相册高分辨率截图与照片的秒级精准解码。
+- **Web 端识别**：支持拖拽图片文件、点击上传或使用键盘快捷键 `Ctrl+V` / `Cmd+V` 粘贴截图识别。
+- **一键联动**：识别结果支持一键复制文本、直接在新标签页打开链接、或一键导入生成器重新设计。
 
-3. **Chrome 右键快捷生成 (Context Menu Actions)**
-   - **全场景右键支持**：在 Chrome 浏览器中，右键选中文本、网页链接或网页空白处，点击右键菜单：
-     - `为选中文本生成二维码`
-     - `为此链接生成二维码`
-     - `为当前页面网址生成二维码`
-   - 自动在主标签页中载入并生成，无需手动复制粘贴。
+### 3. 📱 Android 移动原生端极速体验 (`mobile/android/`)
+- **原生 CameraX & Google ML Kit 扫码引擎**：参考原生 `ScanActivity.kt` 架构，使用 Kotlin + **CameraX** (硬件级视口渲染) + **ML Kit BarcodeScanning** (离线毫秒级识别)。
+- **相册与手电筒支持**：原生扫码界面右上角支持直接调起 Android 原生相册选择器，支持暗光下开关原生手电筒补光。
+- **原生历史记录管理 (`ScanHistoryActivity.kt`)**：扫码界面右上角内置历史记录按钮，可直接切入原生 RecyclerView 历史列表进行搜索、复制或删除。
+- **双向 100% 实时历史记录同步 (Bi-directional Sync)**：
+  - **Native ➔ Web**：原生扫码/相册识别成功后，自动写入原生数据库 (`ScanDatabase`) 并实时同步落盘至 Web `localStorage` 并刷新界面。
+  - **Web ➔ Native**：Web 主界面中新生成的二维码自动通过 `syncWebRecordToNative` 接口写入原生 SQLite 数据库，两端历史记录数据 100% 实时互通。
+- **精简移动端 H5 界面**：安卓 App 内部自动感知 Native 容器，智能隐藏 H5 中重复的“点击/拖拽上传”模块。
 
-4. **本地持久化与双向回显**
-   - **自动保存**：每次点击“生成并保存记录”，数据自动存储至本地。
-   - **点击历史回显**：点击历史记录列表中的任意卡片，**会自动回填表单的所有配置**并在主预览区重新绘制二维码。
-   - **搜索与过滤**：支持通过文本或标题快速检索历史生成记录。
+### 4. 🧩 Chrome 右键快捷生成 (Context Menu Actions)
+- **全场景右键支持**：在 Chrome 浏览器中，右键选中文本、网页链接或网页空白处，点击右键菜单直接生成二维码，自动在主标签页中载入。
 
-5. **数据防擦除保护机制 (`chrome.storage.local`)**
-   - 在 Chrome 插件模式下，数据优先存入插件专属存储 API `chrome.storage.local`，**即使清除浏览器 Cookie 和网页缓存，历史记录也不会被清空**。
+### 5. 💾 数据持久化与保护机制
+- **数据防擦除**：Chrome 插件模式下优先存储于 `chrome.storage.local`，即便清理 Cookie 也不丢失数据；Web 环境与 Android App 端自动降级至 `localStorage` 与 SQLite 存储。
+- **数据备份迁移**：支持一键导出/导入 JSON 格式的历史记录数据。
 
-4. **多格式导出与数据备份**
-   - **图片导出**：支持一键下载 **PNG** 图片与 **SVG** 矢量图。
-   - **剪贴板复制**：支持直接将二维码图片（Blob）或文本复制到系统剪贴板。
-   - **数据迁移**：支持导出历史记录为 JSON 文件，以及随时导入备份 JSON 数据。
-
-5. **响应式 UI 与双主题**
-   - **深浅色主题**：自动识别系统主题，支持手动切换暗黑模式/浅色模式。
-   - **全端适配**：响应式三栏网格布局，自适应桌面端与移动端。
-   - **轻量化导航**：优化的高度的顶栏设计与便携式的输入框下方按钮流。
+### 6. 🎨 统一视觉与全端图标一致性
+- **桌面图标 100% 契合**：安卓 App 图标 (`ic_launcher` & `ic_launcher_round`) 全规格分辨率（`mdpi` 至 `xxxhdpi`）均由 Chrome 扩展图标 `icon128.png` 提取生成，实现多端桌面 Icon 视觉统一。
 
 ---
 
-## 📁 架构设计与模块划分
-
-为了保证代码的高可维护性与单一职责原则，项目采用了高度解耦的模块化结构：
+## 📁 多端分层架构设计 (Monorepo Architecture)
 
 ```text
 HqQrUtils/
-├── manifest.json         # Chrome Extension Manifest V3 配置文件
-├── background.js        # Background Service Worker（监听图标点击开新标签页）
-├── index.html           # 主 HTML5 语义化页面 (CSP 合规)
-├── style.css            # 主 CSS 样式引入入口 (@import)
-├── icons/               # 品牌专属图标 (16x16, 48x48, 128x128)
-├── lib/
-│   └── qrcode.min.js    # 离线 standalone 核心二维码算法引擎
-├── css/                 # 模块化样式目录
-│   ├── variables.css    # 设计 Token 与主题变量
-│   ├── base.css         # 基础重置与响应式网格布局
-│   ├── header.css       # 顶栏导航与 Logo 样式
-│   ├── panels.css       # 表单控件、按钮与预设芯片
-│   ├── preview.css      # 预览视口与二维码容器
-│   ├── history.css      # 历史记录列表与卡片样式
-│   └── toast.css        # 全局 Toast 消息弹窗动画
-└── js/                  # 模块化 JS 脚本目录
-    ├── storage.js       # 存储服务 (StorageManager: chrome.storage.local + localStorage)
-    ├── qr-engine.js     # 二维码 Canvas / SVG 绘制算法封装 (QREngine)
-    ├── ui-toast.js      # Toast 消息提示组件 (ToastManager)
-    ├── ui-history.js    # 历史记录 UI 渲染组件 (HistoryUIManager)
-    └── app.js           # 主应用控制器 (Main Controller: 事件绑定与模块调度)
-```
-
----
-
-## 💡 核心实现逻辑说明
-
-### 1. 双重存储逻辑 (`js/storage.js`)
-为了解决常规网页数据容易随 Cookie 被清理的问题，存储层实现了双重适配：
-- **插件环境**：优先调用 Chrome Extension 专属 `chrome.storage.local` API，独立于网页 Cookie 存储，保障数据安全；
-- **网页环境**：自动降级回退至 `localStorage`；
-- 同时在保存时进行双同步备份，确保跨环境的兼容性。
-
-### 2. 点击历史记录回显逻辑 (`js/app.js` & `js/ui-history.js`)
-点击历史卡片时，触发 `selectHistoryRecord(record)` 函数：
-1. **填充表单**：将记录中的 `content`、`title`、`fgColor`、`bgColor`、`ecl`、`cellSize`、`margin` 逐一回填至 DOM 输入控件。
-2. **激活与高亮**：更新 `activeRecordId` 状态，并高亮历史列表中对应的卡片。
-3. **重新渲染**：调用 `QREngine.createCanvas()`，在主视口无缝重绘大图二维码。
-
-### 3. Chrome 插件点击打开标签页 (`background.js` & `manifest.json`)
----
-
-## 📁 多端分层架构设计 (Multi-Target Architecture)
-
-本项目采用标准的 **Monorepo (单仓多端分层) 架构** 设计，核心业务与算法完全复用，支持一键编译打包至 Web、Chrome 扩展与 Mobile App：
-
-```text
-HqQrUtils/
-├── build_script/            # 🛠️ 自动化多端构建脚本
-│   ├── build_web.sh        # 打包构建 Web 网页产物到 build/web/
-│   └── build_chrome_ext.sh # 打包构建 Chrome 扩展产物到 build/chrome_ext/ 与 build/chrome_ext.zip
+├── common/                  # 🌐 跨平台核心公共代码 (CSS/JS 库与解码引擎)
+│   ├── css/                 # 全局设计 Token 与组件样式
+│   └── js/                  # QREngine, StorageAdapter, ToastManager
+├── web/                     # 💻 Web 独立运行包源码
+├── chrome_ext/              # 🧩 Chrome 扩展程序源码 (Manifest V3)
+│   ├── background.js        # Background Service Worker
+│   └── icons/               # 品牌扩展图标 (16x16, 48x48, 128x128)
+├── mobile/                  # 📱 移动端原生工程与 Bridge 适配器
+│   ├── mobile-layout.css    # 移动端安全区与 Touch 样式
+│   ├── js/native-bridge.js  # Android Native 桥接适配器
+│   └── android/             # Android Kotlin 原生 Gradle 工程
+│       ├── app/src/main/java/com/hq/qrutils/
+│       │   ├── MainActivity.java        # WebView 主入口容器
+│       │   ├── ScanActivity.kt          # CameraX & ML Kit 原生扫码组件
+│       │   ├── ScanResultActivity.kt    # 扫码结果展示与保存
+│       │   ├── ScanHistoryActivity.kt   # 原生历史记录 RecyclerView
+│       │   ├── ScanRecord.kt            # Room 数据库 Entity
+│       │   ├── ScanRecordDao.kt         # Room DAO 接口
+│       │   └── ScanDatabase.kt          # Room Database 数据库
+│       └── .gitignore                   # 安卓工程构建过滤规则
+├── build_script/            # 🛠️ 自动化构建脚本
+│   ├── build_web.sh         # 编译构建 Web 网页产物 -> build/web/
+│   ├── build_chrome_ext.sh  # 编译构建 Chrome 扩展 -> build/chrome_ext/ & .zip
+│   └── build_android.sh     # 组装 Android Native Assets -> mobile/android/
+├── build.md                 # 📖 详细构建与部署指南文档
+├── CHANGE.md                # 📜 版本变更历史记录
+└── README.md                # 📖 项目综合说明文档
 ```
 
 ---
 
 ## 🛠️ 一键自动化构建命令 (Build Scripts)
 
-你可以在终端中运行以下打包脚本（详尽指南请参阅 **[`build.md`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/build.md)**）：
+详细的部署与打包指南请参阅 **[`build.md`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/build.md)**：
 
 ```bash
-# 1. 独立打包网页版产物 (生成至 build/web/)
+# 1. 打包 Web 网页产物 (生成至 build/web/)
 ./build_script/build_web.sh
 
-# 2. 独立打包 Chrome 扩展产物 (生成解压版 build/chrome_ext/ 与 Zip 发行包 build/chrome_ext.zip)
+# 2. 打包 Chrome 扩展产物 (生成 build/chrome_ext/ 与 build/chrome_ext.zip)
 ./build_script/build_chrome_ext.sh
+
+# 3. 组装 Android 资源并编译生成 Android Debug APK (生成至 build/android/)
+./build_script/build_android.sh
+cd mobile/android && ./gradlew assembleDebug
 ```
-
----
-
-## 🛠️ 技术特点与优势运行指南
-
-### 作为 Chrome 浏览器插件安装使用
-
-1. 克隆或下载本项目到本地文件夹（例如 `/Users/edy/Desktop/1hhq/1AItools/HqQrUtils`）。
-2. 打开 Chrome 浏览器，在地址栏输入 `chrome://extensions/` 并回车。
-3. 打开右上角的 **“开发者模式” (Developer mode)** 开关。
-4. 点击左上角的 **“加载已解压的扩展程序” (Load unpacked)**。
-5. 选择本项目的根目录文件夹。
-6. 点击浏览器工具栏中的插件图标（📌 建议固定在工具栏），即可直接打开二维码生成器标签页！
-
-### 作为普通网页运行
-
-双击直接打开目录下的 `index.html` 即可在任意标准浏览器中使用。
 
 ---
 
