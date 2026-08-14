@@ -8,15 +8,22 @@
 
 ### ✨ 新增功能 (New Features)
 
-1. **🛠️ 自动化构建脚本 (`build_script/`)**
-   - **`build_web.sh`**: 自动化清理、组装 `common/` 与 `web/` 入口文件，修正路径依赖并输出独立运行包到 `build/web/`。
+1. **🛠️ 自动化构建脚本与文档 (`build_script/` & `build.md`)**
+   - **`build_web.sh`**: 自动化清理、组装 `common/` 与 `web/` 入口文件，输出独立运行包到 `build/web/`。
    - **`build_chrome_ext.sh`**: 自动化构建 Manifest V3 Chrome 扩展，输出解压版扩展工程到 `build/chrome_ext/` 并打包压缩为可直接发行的 `build/chrome_ext.zip`。
+   - **[`build.md`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/build.md)**: 增加多端打包构建流程与 Chrome 扩展/Web 服务器部署说明文档。
 
 2. **📂 多端分层代码架构重构 (`common/`, `web/`, `chrome_ext/`, `mobile/`)**
    - **`common/`**: 抽象抽取通用核心引擎 (`QREngine`)、抽象存储适配器 (`StorageAdapter`)、Toast 通用组件与历史渲染模型。
    - **`web/`**: 独立 Web 部署版工程。
    - **`chrome_ext/`**: Chrome 扩展独立工程（包含 Manifest V3、Service Worker、图标与插件初始化控制器）。
    - **`mobile/`**: 移动端 App Capacitor 打包工程（包含移动端 Tab 导航、安全区域适配与原生 Bridge 适配器）。
+   - **根目录纯净归类**：彻底清理了根目录下的旧冗余文件与文件夹（如旧 `css/`, `js/`, `lib/`, `icons/` 等），结构更加规范纯粹。
+
+3. **🎨 像素级 UI 细节对齐与标点修复**
+   - 对齐 `二维码生成器` 品牌 Header 栏与右侧 `已保存 X 条记录` Badge 胶囊。
+   - 恢复 `.preview-viewport` 浅灰蓝背景容器与 2×2 网格布局导出按钮组。
+   - 规范了空历史记录提示文字中的全角中文双引号：`点击“生成并保存记录”即可自动记录至本地`。
 
 2. **Chrome 右键菜单快捷生成 (Context Menu Integration)**
    - 在 Chrome 扩展中增加了右键上下文菜单支持：

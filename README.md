@@ -109,7 +109,7 @@ HqQrUtils/
 
 ## 🛠️ 一键自动化构建命令 (Build Scripts)
 
-你可以在终端中运行以下打包脚本：
+你可以在终端中运行以下打包脚本（详尽指南请参阅 **[`build.md`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/build.md)**）：
 
 ```bash
 # 1. 独立打包网页版产物 (生成至 build/web/)
