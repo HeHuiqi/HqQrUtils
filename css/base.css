@@ -28,7 +28,7 @@ body {
 /* Main Grid Layout */
 .main-layout {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 1.1fr;
+    grid-template-columns: 1.35fr 1fr 1.05fr;
     gap: 1.25rem;
     flex: 1;
 }

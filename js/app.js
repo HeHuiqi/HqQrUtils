@@ -1,5 +1,6 @@
 /**
  * HQ 二维码生成器 - 主应用控制器 (Main Controller)
+ * 支持分类标签筛选与星标收藏
  */
 
 (function (window) {
@@ -13,6 +14,7 @@
     let cameraStream = null;
     let cameraScanInterval = null;
     let isCameraActive = false;
+    let currentCategoryFilter = 'all';
 
     // DOM Cache
     const DOM = {
@@ -32,6 +34,7 @@
         // Form Inputs
         qrContentInput: document.getElementById('qrContentInput'),
         qrTitleInput: document.getElementById('qrTitleInput'),
+        categorySelect: document.getElementById('categorySelect'),
         fgColorInput: document.getElementById('fgColorInput'),
         fgHexInput: document.getElementById('fgHexInput'),
         bgColorInput: document.getElementById('bgColorInput'),
@@ -79,7 +82,9 @@
         openDecodeUrlBtn: document.getElementById('openDecodeUrlBtn'),
         transferToEditBtn: document.getElementById('transferToEditBtn'),
 
-        // History
+        // History Controls & Category Filter
+        categoryFilterBar: document.getElementById('categoryFilterBar'),
+        catChips: document.querySelectorAll('.cat-chip'),
         historySearchInput: document.getElementById('historySearchInput'),
         clearSearchBtn: document.getElementById('clearSearchBtn'),
         clearHistoryBtn: document.getElementById('clearHistoryBtn'),
@@ -125,7 +130,7 @@
     // --- 模式切换（生成 vs 解码识别）---
     function switchMode(mode) {
         if (mode === 'generate') {
-            stopCameraScan(); // 切换回生成模式时自动关闭摄像头释放资源
+            stopCameraScan();
             DOM.tabGenerate.classList.add('active');
             DOM.tabDecode.classList.remove('active');
             DOM.generatorSection.style.display = 'block';
@@ -160,7 +165,6 @@
             DOM.cameraBtnText.textContent = '关闭摄像头扫描';
             ToastManager.show('已开启摄像头，请将二维码放入对焦框中', 'info');
 
-            // 启动实时帧扫描循环 (每 150ms 轮询检测一帧)
             clearInterval(cameraScanInterval);
             cameraScanInterval = setInterval(async () => {
                 if (!isCameraActive || DOM.cameraVideo.paused || DOM.cameraVideo.ended) return;
@@ -172,9 +176,7 @@
                         showDecodeResult(decodedText);
                         ToastManager.show('实时扫码识别成功！', 'success');
                     }
-                } catch (e) {
-                    // Ignore transient frame errors
-                }
+                } catch (e) {}
             }, 150);
 
         } catch (err) {
@@ -233,6 +235,7 @@
         return {
             content: DOM.qrContentInput.value.trim(),
             title: DOM.qrTitleInput.value.trim(),
+            category: DOM.categorySelect ? DOM.categorySelect.value : 'none',
             fgColor: DOM.fgColorInput.value || '#0f172a',
             bgColor: DOM.bgColorInput.value || '#ffffff',
             ecl: DOM.eclSelect.value || 'M',
@@ -304,6 +307,8 @@
             id: 'qr_' + now + '_' + Math.random().toString(36).substring(2, 7),
             title: displayTitle,
             content: options.content,
+            category: options.category || 'none',
+            isFavorite: false,
             fgColor: options.fgColor,
             bgColor: options.bgColor,
             ecl: options.logoImage ? 'H' : options.ecl,
@@ -323,12 +328,25 @@
             historyRecords,
             activeRecordId,
             DOM.historySearchInput.value,
+            currentCategoryFilter,
             {
                 onSelectRecord: selectHistoryRecord,
                 onDeleteRecord: deleteRecord,
-                onCopyContent: (content) => copyTextToClipboard(content)
+                onCopyContent: (content) => copyTextToClipboard(content),
+                onToggleFavorite: toggleFavorite
             }
         );
+    }
+
+    // --- ⭐ 切换星标收藏状态 ---
+    function toggleFavorite(id) {
+        const item = historyRecords.find(r => r.id === id);
+        if (item) {
+            item.isFavorite = !item.isFavorite;
+            StorageManager.saveHistory(historyRecords);
+            refreshHistoryUI();
+            ToastManager.show(item.isFavorite ? '已加入星标收藏并置顶' : '已取消星标收藏', 'info');
+        }
     }
 
     // --- 选择并回显历史记录 ---
@@ -338,6 +356,9 @@
 
         DOM.qrContentInput.value = record.content;
         DOM.qrTitleInput.value = record.title;
+        if (DOM.categorySelect) {
+            DOM.categorySelect.value = record.category || 'none';
+        }
         DOM.fgColorInput.value = record.fgColor || '#0f172a';
         DOM.fgHexInput.value = record.fgColor || '#0f172a';
         DOM.bgColorInput.value = record.bgColor || '#ffffff';
@@ -573,7 +594,7 @@
                     currentLogoImage = img;
                     DOM.logoFileName.textContent = file.name;
                     DOM.removeLogoBtn.style.display = 'block';
-                    DOM.eclSelect.value = 'H'; // 自动提高纠错至 H
+                    DOM.eclSelect.value = 'H';
                     renderPreview(false);
                     ToastManager.show('Logo 已载入（已自动调高容错率至 30%）', 'info');
                 };
@@ -638,6 +659,7 @@
         DOM.resetFormBtn.addEventListener('click', () => {
             DOM.qrContentInput.value = '';
             DOM.qrTitleInput.value = '';
+            if (DOM.categorySelect) DOM.categorySelect.value = 'none';
             DOM.fgColorInput.value = '#0f172a';
             DOM.fgHexInput.value = '#0f172a';
             DOM.bgColorInput.value = '#ffffff';
@@ -662,6 +684,18 @@
         DOM.downloadSvgBtn.addEventListener('click', downloadSVG);
         DOM.copyImageBtn.addEventListener('click', copyImageToClipboard);
         DOM.copyTextBtn.addEventListener('click', () => copyTextToClipboard(DOM.qrContentInput.value));
+
+        // 历史分类 Chip 过滤事件
+        if (DOM.categoryFilterBar) {
+            DOM.catChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    DOM.catChips.forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    currentCategoryFilter = chip.dataset.cat;
+                    refreshHistoryUI();
+                });
+            });
+        }
 
         // 解码识别交互
         DOM.dropZone.addEventListener('click', () => DOM.decodeFileInput.click());

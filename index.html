@@ -113,10 +113,21 @@
                         <button id="resetFormBtn" class="btn btn-secondary">重置选项</button>
                     </div>
 
-                    <!-- 备注标题（可选，方便历史查找） -->
+                    <!-- 备注标题与分类选择 -->
                     <div class="form-group margin-top-sm">
                         <label for="qrTitleInput">记录备注标题 (可选)</label>
                         <input type="text" id="qrTitleInput" placeholder="例如：公司官网 / 房间Wi-Fi" maxlength="40">
+                    </div>
+
+                    <div class="form-group inline category-select-group">
+                        <label for="categorySelect">所属分类标签</label>
+                        <select id="categorySelect" class="small-select">
+                            <option value="none">无标签</option>
+                            <option value="work">💼 工作</option>
+                            <option value="personal">👤 个人</option>
+                            <option value="network">📶 网络</option>
+                            <option value="test">🧪 测试</option>
+                        </select>
                     </div>
 
                     <!-- 展开高级设置面板 -->
@@ -316,6 +327,16 @@
                     <div class="history-actions-top">
                         <button id="clearHistoryBtn" class="text-btn danger" title="清空全部历史记录">清空</button>
                     </div>
+                </div>
+
+                <!-- 历史分类标签筛选芯片 -->
+                <div class="category-chips" id="categoryFilterBar">
+                    <button class="cat-chip active" data-cat="all">全部</button>
+                    <button class="cat-chip" data-cat="favorite">⭐ 收藏</button>
+                    <button class="cat-chip" data-cat="work">💼 工作</button>
+                    <button class="cat-chip" data-cat="personal">👤 个人</button>
+                    <button class="cat-chip" data-cat="network">📶 网络</button>
+                    <button class="cat-chip" data-cat="test">🧪 测试</button>
                 </div>
 
                 <!-- 历史搜索栏 -->
