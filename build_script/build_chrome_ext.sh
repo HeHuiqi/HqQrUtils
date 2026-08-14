@@ -15,13 +15,17 @@ echo "🚀 [Build Chrome Extension] 开始打包 Chrome 扩展..."
 # 1. 清理与准备产物目录
 rm -rf "$BUILD_DIR"
 rm -f "$ZIP_FILE"
-mkdir -p "$BUILD_DIR/common"
+mkdir -p "$BUILD_DIR/css"
 mkdir -p "$BUILD_DIR/js"
+mkdir -p "$BUILD_DIR/lib"
 mkdir -p "$BUILD_DIR/icons"
 
-# 2. 复制公共核心资源 (common)
-echo "📦 正在复制 common/ 核心引擎与公共组件..."
-cp -r "$ROOT_DIR/common/"* "$BUILD_DIR/common/"
+# 2. 复制公共核心资源 (common) 到标准的解耦目录
+echo "📦 正在复制 common/ 核心 CSS、JS 与第三方库..."
+cp -r "$ROOT_DIR/common/css/"* "$BUILD_DIR/css/"
+cp -r "$ROOT_DIR/common/js/"* "$BUILD_DIR/js/"
+cp -r "$ROOT_DIR/common/lib/"* "$BUILD_DIR/lib/"
+cp "$ROOT_DIR/common/style.css" "$BUILD_DIR/style.css"
 
 # 3. 复制扩展专属文件
 echo "⚙️ 正在复制 chrome_ext/ 专属配置文件与脚本..."

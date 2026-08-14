@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HQ 二维码生成与识别工具箱 (Chrome Extension)</title>
     <!-- 基础与通用样式模块 -->
-    <link rel="stylesheet" href="common/css/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-light">
     <!-- 全局 Toast 通知容器 -->
@@ -316,13 +316,13 @@
         </main>
     </div>
 
-    <!-- 依赖库与通用业务模块 (在扩展根目录下统一相对路径) -->
-    <script src="common/lib/qrcode.min.js"></script>
-    <script src="common/lib/jsqr.min.js"></script>
-    <script src="common/js/storage-adapter.js"></script>
-    <script src="common/js/qr-engine.js"></script>
-    <script src="common/js/ui-toast.js"></script>
-    <script src="common/js/ui-history.js"></script>
+    <!-- 依赖库与通用业务模块 -->
+    <script src="lib/qrcode.min.js"></script>
+    <script src="lib/jsqr.min.js"></script>
+    <script src="js/storage-adapter.js"></script>
+    <script src="js/qr-engine.js"></script>
+    <script src="js/ui-toast.js"></script>
+    <script src="js/ui-history.js"></script>
     <!-- Extension 专用应用控制器 -->
     <script src="js/app-ext.js"></script>
 </body>
