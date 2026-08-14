@@ -143,17 +143,39 @@
         }
     }
 
-    // --- 摄像头实时扫描逻辑 ---
     async function startCameraScan() {
         if (isCameraActive) {
             stopCameraScan();
             return;
         }
 
+        // 1. 优先检查是否存在 Android 原生 JS 桥接对象 (直接拉起原生 CameraX & ML Kit ScanActivity)
+        if (window.AndroidNative && window.AndroidNative.scanQRCode) {
+            console.log('📱 [Android Native Bridge] 触发原生 ScanActivity 扫码页面');
+            window.AndroidNative.scanQRCode();
+            return;
+        }
+        if (window.AndroidBridge && window.AndroidBridge.startNativeScan && window.AndroidBridge.startNativeScan()) {
+            return;
+        }
+
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-            });
+            let stream = null;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+            } catch (e1) {
+                console.warn('Exact camera constraints failed, trying basic environment facing mode...', e1);
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment' }
+                    });
+                } catch (e2) {
+                    console.warn('Environment facing mode failed, trying generic video...', e2);
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                }
+            }
 
             cameraStream = stream;
             DOM.cameraVideo.srcObject = stream;
@@ -319,6 +341,12 @@
 
         historyRecords.unshift(newRecord);
         StorageManager.saveHistory(historyRecords);
+
+        // 如果处于 Android App 内，同步将 Web 端生成的历史记录保存到原生 SQLite 数据库
+        if (window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
+            window.AndroidNative.syncWebRecordToNative(options.content, displayTitle, options.category || 'none', now);
+        }
+
         return newRecord;
     }
 
@@ -801,6 +829,36 @@
             }
         });
     }
+
+    // 暴露给 Android 原生 ScanActivity / MainActivity 调用的扫码成功回调
+    window.onNativeScanSuccess = function (resultText) {
+        if (!resultText) return;
+        console.log('📱 [Web Native Callback] 收到原生扫码识别结果:', resultText);
+
+        const newRecord = {
+            id: Date.now().toString(),
+            title: '原生扫码识别',
+            content: resultText,
+            category: 'none',
+            isFavorite: false,
+            createdAt: Date.now()
+        };
+
+        historyRecords.unshift(newRecord);
+        StorageManager.saveHistory(historyRecords);
+        refreshHistoryUI();
+
+        // 自动切到识别标签页并回显识别结果
+        switchMode('decode');
+        if (DOM.decodeResultText && DOM.decodeResultCard) {
+            DOM.decodeResultText.value = resultText;
+            DOM.decodeResultCard.style.display = 'block';
+        }
+
+        if (window.ToastManager) {
+            ToastManager.show('原生扫码识别成功，已自动保存至历史记录！', 'success');
+        }
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

@@ -1,0 +1,11 @@
+# Android Gradle & IDE Ignore Rules
+.gradle/
+.idea/
+build/
+app/build/
+app/src/main/assets/public/
+local.properties
+*.iml
+*.jks
+*.keystore
+.DS_Store

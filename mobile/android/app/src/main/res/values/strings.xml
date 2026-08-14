@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HQ 二维码与工具箱</string>
+    <string name="title_activity_main">扫码与识别</string>
+    <string name="scan_title">扫一扫</string>
+    <string name="scan_hint">将二维码/条码放入框内，即可自动扫描存入历史</string>
+    <string name="scan_torch">手电筒</string>
+    <string name="scan_gallery_title">相册识别</string>
+    <string name="scan_no_barcode_found">未能在图片中识别出二维码</string>
+    <string name="scan_result_copied">识别内容已成功复制到剪贴板</string>
+</resources>

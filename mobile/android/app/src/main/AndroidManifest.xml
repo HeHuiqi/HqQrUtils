@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 基础网络与存储权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!-- 相机扫描与手电筒/触觉权限 -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
+
+        <!-- 1. App 主入口 Activity (WebView 加载 Web 应用与完整历史) -->
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme"
+            android:launchMode="singleTop"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 2. 原生 CameraX & ML Kit 扫码 Activity (Web 桥接唤起) -->
+        <activity
+            android:name=".ScanActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize|locale"
+            android:label="@string/scan_title"
+            android:theme="@style/AppTheme"
+            android:exported="false" />
+
+        <!-- 3. 原生扫码结果展示与历史保存 Activity -->
+        <activity
+            android:name=".ScanResultActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="识别结果"
+            android:theme="@style/AppTheme"
+            android:exported="false" />
+
+        <!-- 4. 原生扫码历史记录 Activity (与 Web 页面历史双向同步) -->
+        <activity
+            android:name=".ScanHistoryActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="扫码历史记录"
+            android:theme="@style/AppTheme"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

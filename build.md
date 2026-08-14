@@ -58,6 +58,18 @@ chmod +x build_script/*.sh
   2. 组装 `common/` 共享模块与 `chrome_ext/` 专属文件（`manifest.json` V3、`background.js`、`icons/`）。
   3. 自动生成平级解耦扩展结构，并通过 `zip` 命令行打包生成发行 `.zip` 文件。
 
+### (3) 打包 Android 原生 App 端 (Android Target)
+```bash
+./build_script/build_android.sh
+```
+- **输出位置**：
+  - Android Gradle 工程目录：`mobile/android/`
+  - 打包产物目录：`build/android/`
+- **执行逻辑**：
+  1. 编译最新的 Web 核心静态资源。
+  2. 组装 Android `app/src/main/assets/public/` 原生资源工程。
+  3. 注入 `mobile-layout.css` 移动端布局与 `native-bridge.js` Android 触觉/剪贴板/返回键原生桥接模块。
+
 ---
 
 ## 🎯 3. 打包产物测试与部署指南 (Deployment Guide)

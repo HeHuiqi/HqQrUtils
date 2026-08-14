@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- 相册识别按钮 -->
+    <item
+        android:id="@+id/action_gallery"
+        android:icon="@drawable/ic_gallery"
+        android:title="相册识别"
+        app:iconTint="@android:color/white"
+        app:showAsAction="always" />
+
+    <!-- 历史记录按钮 (已恢复右上角历史记录图标) -->
+    <item
+        android:id="@+id/action_history"
+        android:icon="@drawable/ic_history"
+        android:title="历史记录"
+        app:iconTint="@android:color/white"
+        app:showAsAction="always" />
+
+</menu>

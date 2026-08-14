@@ -8,7 +8,20 @@
 
 ### ✨ 新增功能 (New Features)
 
-1. **🛠️ 自动化构建脚本与文档 (`build_script/` & `build.md`)**
+1. **📱 Android App 容器与原生扫码桥接 (`mobile/android/`)**
+   - **App Launcher 图标视觉统一**：提取 Chrome 插件专属图标 `icon128.png`，适配并生成了 Android 多分辨率（`mdpi` 48x48, `hdpi` 72x72, `xhdpi` 96x96, `xxhdpi` 144x144, `xxxhdpi` 192x192）标准桌面 App Icon 与圆角 Icon（`ic_launcher` & `ic_launcher_round`），实现 Chrome 扩展与 Android 应用桌面图标视觉 100% 一致。
+   - **WebView 主工程保留 (`MainActivity.java`)**：保持 App 原有 Web 主工程逻辑不变，启动时通过 WebView 加载完整功能（二维码生成、历史记录、分类标签、外观配置）。
+   - **`@JavascriptInterface` 原生桥接 (`AndroidNative`)**：当在 Web UI 中唤起扫码时，自动通过 JS 桥接调起原生的 `ScanActivity`。
+   - **CameraX & ML Kit 扫码集成 (`ScanActivity.kt`)**：参考 `HqUtils ScanActivity.kt` 重构原生扫码。**右上角恢复历史记录按钮**，与相册识别按钮并列呈现。
+   - **原生历史记录列表 (`ScanHistoryActivity.kt`)**：点击原生扫码页右上角历史记录，可直接进入原生历史列表查看、搜索、复制或删除记录。
+   - **双向历史记录实时同步机制**：
+     - **Native ➔ Web**：原生扫码/相册识别成功后，自动写入原生数据库 (`ScanDatabase`) 并在返回 Web 页面时通过 `window.onNativeScanSuccess` 实时更新 Web 历史记录 UI。
+     - **Web ➔ Native**：Web 页面中新生成的二维码自动通过 `syncWebRecordToNative` 同步写入原生数据库，实现 Web 界面与原生 `ScanHistoryActivity` 历史数据 100% 双向互通。
+   - **移动端 H5 冗余模块精简**：由于原生 `ScanActivity` 已包含相册识别功能，在 Android App 容器中通过 `.is-android-app .drop-zone { display: none; }` 自动隐藏 H5 中重复的“点击/拖拽上传”模块。
+   - **工程过滤规则优化 (.gitignore)**：更新根目录与安卓子目录 `.gitignore`，规范忽略了 `.gradle/` 编译缓存、`.idea/` IDE 配置、`local.properties` 本地 SDK 路径、`app/build/` 编译产物以及自动生成的 `assets/public/` Web 缓存。
+   - **`build_android.sh`**: 新增 Android 平台一键打包构建脚本，自动组装原生 `assets/public/` 工程目录。
+
+2. **🛠️ 自动化构建脚本与文档 (`build_script/` & `build.md`)**
    - **`build_web.sh`**: 自动化清理、组装 `common/` 与 `web/` 入口文件，输出独立运行包到 `build/web/`。
    - **`build_chrome_ext.sh`**: 自动化构建 Manifest V3 Chrome 扩展，输出解压版扩展工程到 `build/chrome_ext/` 并打包压缩为可直接发行的 `build/chrome_ext.zip`。
    - **[`build.md`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/build.md)**: 增加多端打包构建流程与 Chrome 扩展/Web 服务器部署说明文档。
