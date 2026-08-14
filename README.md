@@ -92,13 +92,43 @@ HqQrUtils/
 3. **重新渲染**：调用 `QREngine.createCanvas()`，在主视口无缝重绘大图二维码。
 
 ### 3. Chrome 插件点击打开标签页 (`background.js` & `manifest.json`)
-在 Manifest V3 规范中：
-- `manifest.json` 中配置了 `"background": { "service_worker": "background.js" }` 并去除了 `default_popup`；
-- 当用户点击 Chrome 工具栏中的扩展图标时，`background.js` 监听到 `chrome.action.onClicked` 事件，调用 `chrome.tabs.create({ url: chrome.runtime.getURL('index.html') })`，直接以主标签页形式全屏打开应用。
+---
+
+## 📁 多端分层架构设计 (Multi-Target Architecture)
+
+本项目采用标准的 **Monorepo (单仓多端分层) 架构** 设计，核心业务与算法完全复用，支持一键编译打包至 Web、Chrome 扩展与 Mobile App：
+
+```text
+HqQrUtils/
+├── common/                  # 1. 通用核心层 (跨平台 100% 复用)
+│   ├── css/                 # 样式 Token、Base、Panels、Preview、History、Toast
+│   ├── js/                  # QREngine、StorageAdapter、ToastManager、HistoryUI
+│   └── lib/                 # qrcode.min.js, jsqr.min.js
+│
+├── web/                     # 2. Web App 网页部署端
+│   ├── index.html           # 网页版入口
+│   └── style.css            # 网页版专用样式
+│
+├── chrome_ext/              # 3. Chrome 浏览器扩展端
+│   ├── manifest.json        # Manifest V3 扩展配置文件
+│   ├── background.js       # Background Service Worker & 右键菜单
+│   ├── icons/               # 扩展专属图标 (16, 48, 128)
+│   ├── index.html           # 扩展版入口
+│   └── js/app-ext.js        # 扩展应用控制器
+│
+├── mobile/                  # 4. 移动端 App 工程 (Capacitor / Android / iOS)
+│   ├── capacitor.config.json# Capacitor 打包配置
+│   ├── mobile-layout.css    # 移动端底部 Tab 导航栏与安全区域
+│   ├── native-bridge.js     # 移动端原生 API 桥接适配器
+│   └── README.md            # iOS / Android 构建步骤指南
+│
+├── README.md
+└── CHANGE.md
+```
 
 ---
 
-## 🛠️ 安装与运行指南
+## 🛠️ 技术特点与优势运行指南
 
 ### 作为 Chrome 浏览器插件安装使用
 

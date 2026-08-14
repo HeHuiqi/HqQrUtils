@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HQ 二维码生成与识别工具箱</title>
+    <title>HQ 二维码生成与识别工具箱 (Web App)</title>
     <!-- 基础与通用样式模块 -->
-    <link rel="stylesheet" href="common/css/variables.css">
-    <link rel="stylesheet" href="common/css/base.css">
-    <link rel="stylesheet" href="common/css/header.css">
-    <link rel="stylesheet" href="common/css/panels.css">
-    <link rel="stylesheet" href="common/css/preview.css">
-    <link rel="stylesheet" href="common/css/history.css">
-    <link rel="stylesheet" href="common/css/toast.css">
+    <link rel="stylesheet" href="../common/css/variables.css">
+    <link rel="stylesheet" href="../common/css/base.css">
+    <link rel="stylesheet" href="../common/css/header.css">
+    <link rel="stylesheet" href="../common/css/panels.css">
+    <link rel="stylesheet" href="../common/css/preview.css">
+    <link rel="stylesheet" href="../common/css/history.css">
+    <link rel="stylesheet" href="../common/css/toast.css">
 </head>
 <body class="theme-light">
     <!-- 全局 Toast 通知容器 -->
@@ -33,16 +33,10 @@
                 </svg>
                 <div class="brand-text">
                     <h1>HQ 二维码与工具箱</h1>
-                    <span class="sub-title">多端融合版 · 本地存储保护</span>
+                    <span class="sub-title">Web App 网页版</span>
                 </div>
             </div>
             <div class="header-actions">
-                <span class="storage-badge" title="数据使用 chrome.storage.local / localStorage 安全存储">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                    双重安全存储
-                </span>
                 <button id="themeToggleBtn" class="icon-btn" title="切换深色/浅色主题">
                     <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"/>
@@ -323,13 +317,13 @@
     </div>
 
     <!-- 依赖库与通用业务模块 -->
-    <script src="common/lib/qrcode.min.js"></script>
-    <script src="common/lib/jsqr.min.js"></script>
-    <script src="common/js/storage-adapter.js"></script>
-    <script src="common/js/qr-engine.js"></script>
-    <script src="common/js/ui-toast.js"></script>
-    <script src="common/js/ui-history.js"></script>
-    <!-- 主应用控制器 -->
-    <script src="chrome_ext/js/app-ext.js"></script>
+    <script src="../common/lib/qrcode.min.js"></script>
+    <script src="../common/lib/jsqr.min.js"></script>
+    <script src="../common/js/storage-adapter.js"></script>
+    <script src="../common/js/qr-engine.js"></script>
+    <script src="../common/js/ui-toast.js"></script>
+    <script src="../common/js/ui-history.js"></script>
+    <!-- Web 应用专用控制器 -->
+    <script src="../chrome_ext/js/app-ext.js"></script>
 </body>
 </html>

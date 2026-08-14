@@ -8,7 +8,13 @@
 
 ### ✨ 新增功能 (New Features)
 
-1. **Chrome 右键菜单快捷生成 (Context Menu Integration)**
+1. **📂 多端分层代码架构重构 (`common/`, `web/`, `chrome_ext/`, `mobile/`)**
+   - **`common/`**: 抽象抽取通用核心引擎 (`QREngine`)、抽象存储适配器 (`StorageAdapter`)、Toast 通用组件与历史渲染模型。
+   - **`web/`**: 独立 Web 部署版工程。
+   - **`chrome_ext/`**: Chrome 扩展独立工程（包含 Manifest V3、Service Worker、图标与插件初始化控制器）。
+   - **`mobile/`**: 移动端 App Capacitor 打包工程（包含移动端 Tab 导航、安全区域适配与原生 Bridge 适配器）。
+
+2. **Chrome 右键菜单快捷生成 (Context Menu Integration)**
    - 在 Chrome 扩展中增加了右键上下文菜单支持：
      - **右键选中文本** ➔ `为选中文本 "%s" 生成二维码`
      - **右键网页链接** ➔ `为此链接生成二维码`

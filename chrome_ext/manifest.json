@@ -8,14 +8,14 @@
     "contextMenus"
   ],
   "background": {
-    "service_worker": "chrome_ext/background.js"
+    "service_worker": "background.js"
   },
   "action": {
     "default_title": "打开 HQ 二维码生成与识别工具"
   },
   "icons": {
-    "16": "chrome_ext/icons/icon16.png",
-    "48": "chrome_ext/icons/icon48.png",
-    "128": "chrome_ext/icons/icon128.png"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }
