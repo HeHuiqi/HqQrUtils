@@ -8,7 +8,11 @@
 
 ### ✨ 新增功能 (New Features)
 
-1. **📂 多端分层代码架构重构 (`common/`, `web/`, `chrome_ext/`, `mobile/`)**
+1. **🛠️ 自动化构建脚本 (`build_script/`)**
+   - **`build_web.sh`**: 自动化清理、组装 `common/` 与 `web/` 入口文件，修正路径依赖并输出独立运行包到 `build/web/`。
+   - **`build_chrome_ext.sh`**: 自动化构建 Manifest V3 Chrome 扩展，输出解压版扩展工程到 `build/chrome_ext/` 并打包压缩为可直接发行的 `build/chrome_ext.zip`。
+
+2. **📂 多端分层代码架构重构 (`common/`, `web/`, `chrome_ext/`, `mobile/`)**
    - **`common/`**: 抽象抽取通用核心引擎 (`QREngine`)、抽象存储适配器 (`StorageAdapter`)、Toast 通用组件与历史渲染模型。
    - **`web/`**: 独立 Web 部署版工程。
    - **`chrome_ext/`**: Chrome 扩展独立工程（包含 Manifest V3、Service Worker、图标与插件初始化控制器）。

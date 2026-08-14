@@ -100,30 +100,23 @@ HqQrUtils/
 
 ```text
 HqQrUtils/
-├── common/                  # 1. 通用核心层 (跨平台 100% 复用)
-│   ├── css/                 # 样式 Token、Base、Panels、Preview、History、Toast
-│   ├── js/                  # QREngine、StorageAdapter、ToastManager、HistoryUI
-│   └── lib/                 # qrcode.min.js, jsqr.min.js
-│
-├── web/                     # 2. Web App 网页部署端
-│   ├── index.html           # 网页版入口
-│   └── style.css            # 网页版专用样式
-│
-├── chrome_ext/              # 3. Chrome 浏览器扩展端
-│   ├── manifest.json        # Manifest V3 扩展配置文件
-│   ├── background.js       # Background Service Worker & 右键菜单
-│   ├── icons/               # 扩展专属图标 (16, 48, 128)
-│   ├── index.html           # 扩展版入口
-│   └── js/app-ext.js        # 扩展应用控制器
-│
-├── mobile/                  # 4. 移动端 App 工程 (Capacitor / Android / iOS)
-│   ├── capacitor.config.json# Capacitor 打包配置
-│   ├── mobile-layout.css    # 移动端底部 Tab 导航栏与安全区域
-│   ├── native-bridge.js     # 移动端原生 API 桥接适配器
-│   └── README.md            # iOS / Android 构建步骤指南
-│
-├── README.md
-└── CHANGE.md
+├── build_script/            # 🛠️ 自动化多端构建脚本
+│   ├── build_web.sh        # 打包构建 Web 网页产物到 build/web/
+│   └── build_chrome_ext.sh # 打包构建 Chrome 扩展产物到 build/chrome_ext/ 与 build/chrome_ext.zip
+```
+
+---
+
+## 🛠️ 一键自动化构建命令 (Build Scripts)
+
+你可以在终端中运行以下打包脚本：
+
+```bash
+# 1. 独立打包网页版产物 (生成至 build/web/)
+./build_script/build_web.sh
+
+# 2. 独立打包 Chrome 扩展产物 (生成解压版 build/chrome_ext/ 与 Zip 发行包 build/chrome_ext.zip)
+./build_script/build_chrome_ext.sh
 ```
 
 ---
