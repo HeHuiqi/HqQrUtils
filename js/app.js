@@ -9,9 +9,16 @@
     let historyRecords = [];
     let activeRecordId = null;
     let autoPreviewTimer = null;
+    let currentLogoImage = null;
 
     // DOM Cache
     const DOM = {
+        // Mode Tabs & Views
+        tabGenerate: document.getElementById('tabGenerate'),
+        tabDecode: document.getElementById('tabDecode'),
+        generatorSection: document.getElementById('generatorSection'),
+        decoderSection: document.getElementById('decoderSection'),
+
         // Form Inputs
         qrContentInput: document.getElementById('qrContentInput'),
         qrTitleInput: document.getElementById('qrTitleInput'),
@@ -26,6 +33,12 @@
         marginVal: document.getElementById('marginVal'),
         charCounter: document.getElementById('charCounter'),
         clearContentBtn: document.getElementById('clearContentBtn'),
+
+        // Logo Controls
+        logoFileInput: document.getElementById('logoFileInput'),
+        uploadLogoBtn: document.getElementById('uploadLogoBtn'),
+        logoFileName: document.getElementById('logoFileName'),
+        removeLogoBtn: document.getElementById('removeLogoBtn'),
 
         // Buttons
         generateBtn: document.getElementById('generateBtn'),
@@ -46,6 +59,16 @@
         copyImageBtn: document.getElementById('copyImageBtn'),
         copyTextBtn: document.getElementById('copyTextBtn'),
 
+        // Decoder Controls
+        dropZone: document.getElementById('dropZone'),
+        decodeFileInput: document.getElementById('decodeFileInput'),
+        decodeResultCard: document.getElementById('decodeResultCard'),
+        decodeResultText: document.getElementById('decodeResultText'),
+        decodeTimeTag: document.getElementById('decodeTimeTag'),
+        copyDecodeTextBtn: document.getElementById('copyDecodeTextBtn'),
+        openDecodeUrlBtn: document.getElementById('openDecodeUrlBtn'),
+        transferToEditBtn: document.getElementById('transferToEditBtn'),
+
         // History
         historySearchInput: document.getElementById('historySearchInput'),
         clearSearchBtn: document.getElementById('clearSearchBtn'),
@@ -63,11 +86,45 @@
         bindEvents();
         updateCharCount();
 
-        // 从 Storage 模块加载数据
+        // 从 Storage 模块加载历史数据
         StorageManager.loadHistory((records) => {
             historyRecords = records || [];
             refreshHistoryUI();
         });
+
+        // 检查右键菜单 URL 参数
+        checkUrlQueryParams();
+    }
+
+    // --- 检查 URL 参数（响应右键菜单快捷生成）---
+    function checkUrlQueryParams() {
+        const params = new URLSearchParams(window.location.search);
+        const contentParam = params.get('content');
+        const titleParam = params.get('title');
+        const autoSaveParam = params.get('autoSave');
+
+        if (contentParam) {
+            switchMode('generate');
+            DOM.qrContentInput.value = contentParam;
+            if (titleParam) DOM.qrTitleInput.value = titleParam;
+            updateCharCount();
+            renderPreview(autoSaveParam === '1');
+        }
+    }
+
+    // --- 模式切换（生成 vs 解码识别）---
+    function switchMode(mode) {
+        if (mode === 'generate') {
+            DOM.tabGenerate.classList.add('active');
+            DOM.tabDecode.classList.remove('active');
+            DOM.generatorSection.style.display = 'block';
+            DOM.decoderSection.style.display = 'none';
+        } else {
+            DOM.tabDecode.classList.add('active');
+            DOM.tabGenerate.classList.remove('active');
+            DOM.decoderSection.style.display = 'flex';
+            DOM.generatorSection.style.display = 'none';
+        }
     }
 
     // --- 主题控制 ---
@@ -102,7 +159,8 @@
             bgColor: DOM.bgColorInput.value || '#ffffff',
             ecl: DOM.eclSelect.value || 'M',
             cellSize: parseInt(DOM.cellSizeInput.value, 10) || 8,
-            margin: parseInt(DOM.marginInput.value, 10) || 4
+            margin: parseInt(DOM.marginInput.value, 10) || 4,
+            logoImage: currentLogoImage
         };
     }
 
@@ -125,7 +183,7 @@
             DOM.qrCanvasContainer.appendChild(canvas);
 
             DOM.metaSizeTag.textContent = `尺寸: ${canvas.width}×${canvas.height}px`;
-            DOM.metaEclTag.textContent = `容错: ${options.ecl} (${QREngine.getEclPercentage(options.ecl)})`;
+            DOM.metaEclTag.textContent = `容错: ${options.logoImage ? 'H (30%)' : options.ecl + ' (' + QREngine.getEclPercentage(options.ecl) + ')'}`;
             DOM.metaTimeTag.textContent = `生成时间: ${new Date().toLocaleTimeString()}`;
             DOM.qrMetaInfo.style.display = 'flex';
 
@@ -170,7 +228,7 @@
             content: options.content,
             fgColor: options.fgColor,
             bgColor: options.bgColor,
-            ecl: options.ecl,
+            ecl: options.logoImage ? 'H' : options.ecl,
             cellSize: options.cellSize,
             margin: options.margin,
             createdAt: now
@@ -197,6 +255,7 @@
 
     // --- 选择并回显历史记录 ---
     function selectHistoryRecord(record) {
+        switchMode('generate');
         activeRecordId = record.id;
 
         DOM.qrContentInput.value = record.content;
@@ -239,6 +298,42 @@
             refreshHistoryUI();
             DOM.activeRecordTag.textContent = '新建生成';
             ToastManager.show('已清空所有历史记录', 'info');
+        }
+    }
+
+    // --- 解码与识别业务逻辑 ---
+    function processDecodeFile(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            ToastManager.show('请选择有效的图片文件！', 'error');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = async () => {
+                try {
+                    const resultText = await QREngine.decodeImage(img);
+                    showDecodeResult(resultText);
+                    ToastManager.show('二维码解析成功！', 'success');
+                } catch (err) {
+                    ToastManager.show(err.message || '未能在图片中解析出二维码', 'error');
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function showDecodeResult(text) {
+        DOM.decodeResultText.value = text;
+        DOM.decodeTimeTag.textContent = new Date().toLocaleTimeString();
+        DOM.decodeResultCard.style.display = 'flex';
+
+        const isUrl = /^https?:\/\//i.test(text.trim());
+        DOM.openDecodeUrlBtn.style.display = isUrl ? 'inline-flex' : 'none';
+        if (isUrl) {
+            DOM.openDecodeUrlBtn.onclick = () => window.open(text.trim(), '_blank');
         }
     }
 
@@ -357,8 +452,14 @@
 
     // --- 事件绑定 ---
     function bindEvents() {
+        // 模式切换 Tab
+        DOM.tabGenerate.addEventListener('click', () => switchMode('generate'));
+        DOM.tabDecode.addEventListener('click', () => switchMode('decode'));
+
+        // 主题切换
         DOM.themeToggleBtn.addEventListener('click', toggleTheme);
 
+        // 文本输入实时防抖
         DOM.qrContentInput.addEventListener('input', () => {
             updateCharCount();
             activeRecordId = null;
@@ -377,6 +478,38 @@
             renderPreview(false);
         });
 
+        // Logo 图片上传与移除
+        DOM.uploadLogoBtn.addEventListener('click', () => DOM.logoFileInput.click());
+        DOM.logoFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const img = new Image();
+                img.onload = () => {
+                    currentLogoImage = img;
+                    DOM.logoFileName.textContent = file.name;
+                    DOM.removeLogoBtn.style.display = 'block';
+                    DOM.eclSelect.value = 'H'; // 自动提高纠错至 H
+                    renderPreview(false);
+                    ToastManager.show('Logo 已载入（已自动调高容错率至 30%）', 'info');
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        DOM.removeLogoBtn.addEventListener('click', () => {
+            currentLogoImage = null;
+            DOM.logoFileInput.value = '';
+            DOM.logoFileName.textContent = '未选择图片';
+            DOM.removeLogoBtn.style.display = 'none';
+            renderPreview(false);
+            ToastManager.show('已移除中心 Logo', 'info');
+        });
+
+        // 颜色选择器
         DOM.fgColorInput.addEventListener('input', (e) => {
             DOM.fgHexInput.value = e.target.value;
             renderPreview(false);
@@ -432,21 +565,80 @@
             DOM.cellSizeVal.textContent = '8px';
             DOM.marginInput.value = 4;
             DOM.marginVal.textContent = '4';
+            currentLogoImage = null;
+            DOM.logoFileInput.value = '';
+            DOM.logoFileName.textContent = '未选择图片';
+            DOM.removeLogoBtn.style.display = 'none';
             activeRecordId = null;
             updateCharCount();
             renderPreview(false);
             ToastManager.show('已重置所有设置选项', 'info');
         });
 
+        // 导出与复制
         DOM.downloadPngBtn.addEventListener('click', downloadPNG);
         DOM.downloadSvgBtn.addEventListener('click', downloadSVG);
         DOM.copyImageBtn.addEventListener('click', copyImageToClipboard);
         DOM.copyTextBtn.addEventListener('click', () => copyTextToClipboard(DOM.qrContentInput.value));
 
+        // 解码识别交互
+        DOM.dropZone.addEventListener('click', () => DOM.decodeFileInput.click());
+        DOM.decodeFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                processDecodeFile(e.target.files[0]);
+            }
+        });
+
+        // 拖拽文件上传
+        DOM.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            DOM.dropZone.classList.add('dragover');
+        });
+        DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('dragover'));
+        DOM.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            DOM.dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                processDecodeFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // 剪贴板粘贴识别 Ctrl+V / Cmd+V
+        document.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || window.clipboardData).items;
+            if (!items) return;
+            for (let item of items) {
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    switchMode('decode');
+                    processDecodeFile(blob);
+                    e.preventDefault();
+                    break;
+                }
+            }
+        });
+
+        // 解码结果按钮
+        DOM.copyDecodeTextBtn.addEventListener('click', () => {
+            copyTextToClipboard(DOM.decodeResultText.value);
+        });
+
+        DOM.transferToEditBtn.addEventListener('click', () => {
+            const text = DOM.decodeResultText.value;
+            if (!text) return;
+            switchMode('generate');
+            DOM.qrContentInput.value = text;
+            updateCharCount();
+            renderPreview(false);
+            ToastManager.show('已导入生成器输入框', 'info');
+        });
+
+        // 预设芯片
         DOM.presetChips.forEach(chip => {
             chip.addEventListener('click', () => applyPreset(chip.dataset.preset));
         });
 
+        // 历史搜索
         DOM.historySearchInput.addEventListener('input', (e) => {
             const val = e.target.value;
             DOM.clearSearchBtn.style.display = val ? 'block' : 'none';
