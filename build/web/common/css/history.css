@@ -1,0 +1,316 @@
+/* History Sidebar & Item Cards */
+.history-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+}
+
+.text-btn {
+    background: none;
+    border: none;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.text-btn.danger {
+    color: var(--color-danger);
+}
+
+.text-btn.danger:hover {
+    text-decoration: underline;
+}
+
+/* Category Filter Chips Bar */
+.category-chips {
+    display: flex;
+    gap: 0.375rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.category-chips::-webkit-scrollbar {
+    height: 4px;
+}
+.category-chips::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.cat-chip {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.2rem 0.625rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-fast);
+}
+
+.cat-chip:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.cat-chip.active {
+    background: var(--accent-light);
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-box svg {
+    position: absolute;
+    left: 0.75rem;
+    color: var(--text-muted);
+}
+
+.search-box input {
+    padding-left: 2.25rem;
+    padding-right: 2rem;
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.history-list-wrapper {
+    flex: 1;
+    min-height: 280px;
+    max-height: 480px;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+    margin-right: -0.25rem;
+    padding-right: 0.25rem;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Custom Scrollbar */
+.history-list-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+.history-list-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+.history-list-wrapper::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+.history-list-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* History Item Card */
+.history-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    user-select: none;
+    width: 100%;
+    min-width: 0;
+}
+
+.history-item:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.history-item.active {
+    background: var(--accent-light);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.history-item.favorite-item {
+    border-left: 3px solid #f59e0b;
+}
+
+.history-thumb {
+    width: 52px;
+    height: 52px;
+    background: #ffffff;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    padding: 2px;
+}
+
+.history-thumb img, .history-thumb canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.history-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    overflow: hidden;
+}
+
+.history-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.history-title > span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+}
+
+.history-content-snippet {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: monospace;
+    min-width: 0;
+}
+
+.history-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.cat-badge-pill {
+    font-size: 0.7rem;
+    padding: 0.05rem 0.375rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.history-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.item-action-btn {
+    background: none;
+    border: none;
+    padding: 0.375rem;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.item-action-btn:hover {
+    color: var(--accent-primary);
+    background: var(--bg-hover);
+}
+
+.item-action-btn.star {
+    color: var(--text-muted);
+}
+
+.item-action-btn.star:hover, .item-action-btn.star.starred {
+    color: #f59e0b;
+}
+
+.item-action-btn.delete:hover {
+    color: var(--color-danger);
+}
+
+.empty-history {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    text-align: center;
+    gap: 0.5rem;
+}
+
+.empty-history p {
+    font-weight: 500;
+    font-size: 0.9375rem;
+}
+
+.empty-history .sub-text {
+    font-size: 0.8125rem;
+}
+
+.history-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.8125rem;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-size: 0.8125rem;
+}
+
+.btn-link:hover {
+    text-decoration: underline;
+}
+
+.divider {
+    color: var(--border-color);
+}
