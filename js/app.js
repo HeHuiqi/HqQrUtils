@@ -1,0 +1,503 @@
+/**
+ * HQ 二维码生成器 - 主应用控制器 (Main Controller)
+ */
+
+(function (window) {
+    'use strict';
+
+    // State Variables
+    let historyRecords = [];
+    let activeRecordId = null;
+    let autoPreviewTimer = null;
+
+    // DOM Cache
+    const DOM = {
+        // Form Inputs
+        qrContentInput: document.getElementById('qrContentInput'),
+        qrTitleInput: document.getElementById('qrTitleInput'),
+        fgColorInput: document.getElementById('fgColorInput'),
+        fgHexInput: document.getElementById('fgHexInput'),
+        bgColorInput: document.getElementById('bgColorInput'),
+        bgHexInput: document.getElementById('bgHexInput'),
+        eclSelect: document.getElementById('eclSelect'),
+        cellSizeInput: document.getElementById('cellSizeInput'),
+        cellSizeVal: document.getElementById('cellSizeVal'),
+        marginInput: document.getElementById('marginInput'),
+        marginVal: document.getElementById('marginVal'),
+        charCounter: document.getElementById('charCounter'),
+        clearContentBtn: document.getElementById('clearContentBtn'),
+
+        // Buttons
+        generateBtn: document.getElementById('generateBtn'),
+        resetFormBtn: document.getElementById('resetFormBtn'),
+        themeToggleBtn: document.getElementById('themeToggleBtn'),
+
+        // Preview & Actions
+        qrCanvasContainer: document.getElementById('qrCanvasContainer'),
+        emptyPreview: document.getElementById('emptyPreview'),
+        qrMetaInfo: document.getElementById('qrMetaInfo'),
+        metaSizeTag: document.getElementById('metaSizeTag'),
+        metaEclTag: document.getElementById('metaEclTag'),
+        metaTimeTag: document.getElementById('metaTimeTag'),
+        activeRecordTag: document.getElementById('activeRecordTag'),
+        
+        downloadPngBtn: document.getElementById('downloadPngBtn'),
+        downloadSvgBtn: document.getElementById('downloadSvgBtn'),
+        copyImageBtn: document.getElementById('copyImageBtn'),
+        copyTextBtn: document.getElementById('copyTextBtn'),
+
+        // History
+        historySearchInput: document.getElementById('historySearchInput'),
+        clearSearchBtn: document.getElementById('clearSearchBtn'),
+        clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+        exportHistoryBtn: document.getElementById('exportHistoryBtn'),
+        importHistoryBtn: document.getElementById('importHistoryBtn'),
+        importFileInput: document.getElementById('importFileInput'),
+
+        presetChips: document.querySelectorAll('.chip')
+    };
+
+    // --- 初始化入口 ---
+    function init() {
+        initTheme();
+        bindEvents();
+        updateCharCount();
+
+        // 从 Storage 模块加载数据
+        StorageManager.loadHistory((records) => {
+            historyRecords = records || [];
+            refreshHistoryUI();
+        });
+    }
+
+    // --- 主题控制 ---
+    function initTheme() {
+        const savedTheme = StorageManager.getTheme();
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.body.classList.replace('theme-light', 'theme-dark');
+        } else {
+            document.body.classList.replace('theme-dark', 'theme-light');
+        }
+    }
+
+    function toggleTheme() {
+        const isDark = document.body.classList.contains('theme-dark');
+        if (isDark) {
+            document.body.classList.replace('theme-dark', 'theme-light');
+            StorageManager.setTheme('light');
+            ToastManager.show('已切换至浅色主题', 'info');
+        } else {
+            document.body.classList.replace('theme-light', 'theme-dark');
+            StorageManager.setTheme('dark');
+            ToastManager.show('已切换至深色主题', 'info');
+        }
+    }
+
+    // --- 获取表单设置 ---
+    function getFormValues() {
+        return {
+            content: DOM.qrContentInput.value.trim(),
+            title: DOM.qrTitleInput.value.trim(),
+            fgColor: DOM.fgColorInput.value || '#0f172a',
+            bgColor: DOM.bgColorInput.value || '#ffffff',
+            ecl: DOM.eclSelect.value || 'M',
+            cellSize: parseInt(DOM.cellSizeInput.value, 10) || 8,
+            margin: parseInt(DOM.marginInput.value, 10) || 4
+        };
+    }
+
+    // --- 实时预览渲染 ---
+    function renderPreview(shouldSave = false) {
+        const options = getFormValues();
+
+        if (!options.content) {
+            DOM.qrCanvasContainer.innerHTML = '';
+            DOM.qrCanvasContainer.appendChild(DOM.emptyPreview);
+            DOM.qrMetaInfo.style.display = 'none';
+            toggleActionButtons(false);
+            return null;
+        }
+
+        try {
+            const { canvas } = QREngine.createCanvas(options);
+
+            DOM.qrCanvasContainer.innerHTML = '';
+            DOM.qrCanvasContainer.appendChild(canvas);
+
+            DOM.metaSizeTag.textContent = `尺寸: ${canvas.width}×${canvas.height}px`;
+            DOM.metaEclTag.textContent = `容错: ${options.ecl} (${QREngine.getEclPercentage(options.ecl)})`;
+            DOM.metaTimeTag.textContent = `生成时间: ${new Date().toLocaleTimeString()}`;
+            DOM.qrMetaInfo.style.display = 'flex';
+
+            toggleActionButtons(true);
+
+            if (shouldSave) {
+                const record = saveRecord(options);
+                activeRecordId = record.id;
+                DOM.activeRecordTag.textContent = record.title || '记录已保存';
+                refreshHistoryUI();
+                ToastManager.show('已成功生成并保存到本地记录', 'success');
+            } else if (!activeRecordId) {
+                DOM.activeRecordTag.textContent = '实时预览';
+            }
+
+            return canvas;
+        } catch (err) {
+            console.error('QR Render Error:', err);
+            ToastManager.show('生成二维码失败：' + (err.message || '内容过多或参数有误'), 'error');
+            return null;
+        }
+    }
+
+    function toggleActionButtons(enabled) {
+        DOM.downloadPngBtn.disabled = !enabled;
+        DOM.downloadSvgBtn.disabled = !enabled;
+        DOM.copyImageBtn.disabled = !enabled;
+        DOM.copyTextBtn.disabled = !enabled;
+    }
+
+    // --- 保存记录 ---
+    function saveRecord(options) {
+        const now = Date.now();
+        let displayTitle = options.title;
+        if (!displayTitle) {
+            displayTitle = options.content.length > 20 ? options.content.substring(0, 20) + '...' : options.content;
+        }
+
+        const newRecord = {
+            id: 'qr_' + now + '_' + Math.random().toString(36).substring(2, 7),
+            title: displayTitle,
+            content: options.content,
+            fgColor: options.fgColor,
+            bgColor: options.bgColor,
+            ecl: options.ecl,
+            cellSize: options.cellSize,
+            margin: options.margin,
+            createdAt: now
+        };
+
+        historyRecords.unshift(newRecord);
+        StorageManager.saveHistory(historyRecords);
+        return newRecord;
+    }
+
+    // --- 刷新历史记录 UI ---
+    function refreshHistoryUI() {
+        HistoryUIManager.renderList(
+            historyRecords,
+            activeRecordId,
+            DOM.historySearchInput.value,
+            {
+                onSelectRecord: selectHistoryRecord,
+                onDeleteRecord: deleteRecord,
+                onCopyContent: (content) => copyTextToClipboard(content)
+            }
+        );
+    }
+
+    // --- 选择并回显历史记录 ---
+    function selectHistoryRecord(record) {
+        activeRecordId = record.id;
+
+        DOM.qrContentInput.value = record.content;
+        DOM.qrTitleInput.value = record.title;
+        DOM.fgColorInput.value = record.fgColor || '#0f172a';
+        DOM.fgHexInput.value = record.fgColor || '#0f172a';
+        DOM.bgColorInput.value = record.bgColor || '#ffffff';
+        DOM.bgHexInput.value = record.bgColor || '#ffffff';
+        DOM.eclSelect.value = record.ecl || 'M';
+        DOM.cellSizeInput.value = record.cellSize || 8;
+        DOM.cellSizeVal.textContent = (record.cellSize || 8) + 'px';
+        DOM.marginInput.value = typeof record.margin !== 'undefined' ? record.margin : 4;
+        DOM.marginVal.textContent = typeof record.margin !== 'undefined' ? record.margin : 4;
+
+        updateCharCount();
+        renderPreview(false);
+
+        DOM.activeRecordTag.textContent = `已回显: ${record.title}`;
+        refreshHistoryUI();
+        ToastManager.show(`已回显历史记录："${record.title}"`, 'info');
+    }
+
+    function deleteRecord(id) {
+        historyRecords = historyRecords.filter(item => item.id !== id);
+        StorageManager.saveHistory(historyRecords);
+        if (activeRecordId === id) {
+            activeRecordId = null;
+            DOM.activeRecordTag.textContent = '新建生成';
+        }
+        refreshHistoryUI();
+        ToastManager.show('已删除该条记录', 'info');
+    }
+
+    function clearAllHistory() {
+        if (historyRecords.length === 0) return;
+        if (confirm('确定要清空全部本地历史生成记录吗？该操作不可撤销。')) {
+            historyRecords = [];
+            activeRecordId = null;
+            StorageManager.saveHistory(historyRecords);
+            refreshHistoryUI();
+            DOM.activeRecordTag.textContent = '新建生成';
+            ToastManager.show('已清空所有历史记录', 'info');
+        }
+    }
+
+    // --- 导出与剪贴板操作 ---
+    function downloadPNG() {
+        const canvas = DOM.qrCanvasContainer.querySelector('canvas');
+        if (!canvas) {
+            ToastManager.show('无法找到导出的二维码图', 'error');
+            return;
+        }
+        const link = document.createElement('a');
+        const fileName = `qrcode_${Date.now()}.png`;
+        link.download = fileName;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        ToastManager.show(`已下载 ${fileName}`, 'success');
+    }
+
+    function downloadSVG() {
+        const options = getFormValues();
+        if (!options.content) return;
+        try {
+            const svgString = QREngine.createSVG(options);
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const fileName = `qrcode_${Date.now()}.svg`;
+            link.download = fileName;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            ToastManager.show(`已下载矢量格式 ${fileName}`, 'success');
+        } catch (e) {
+            ToastManager.show('导出 SVG 失败', 'error');
+        }
+    }
+
+    function copyImageToClipboard() {
+        const canvas = DOM.qrCanvasContainer.querySelector('canvas');
+        if (!canvas) return;
+
+        canvas.toBlob(blob => {
+            if (!blob) return;
+            if (navigator.clipboard && window.ClipboardItem) {
+                const item = new ClipboardItem({ 'image/png': blob });
+                navigator.clipboard.write([item]).then(() => {
+                    ToastManager.show('二维码图片已成功复制到剪贴板！', 'success');
+                }).catch(() => {
+                    ToastManager.show('复制图片失败', 'error');
+                });
+            } else {
+                ToastManager.show('当前浏览器不支持直接复制图片', 'error');
+            }
+        }, 'image/png');
+    }
+
+    function copyTextToClipboard(textToCopy) {
+        const text = textToCopy || DOM.qrContentInput.value;
+        if (!text) return;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                ToastManager.show('文本内容已复制到剪贴板', 'success');
+            }).catch(() => fallbackCopyText(text));
+        } else {
+            fallbackCopyText(text);
+        }
+    }
+
+    function fallbackCopyText(text) {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        try {
+            document.execCommand('copy');
+            ToastManager.show('文本内容已复制到剪贴板', 'success');
+        } catch (err) {
+            ToastManager.show('复制失败', 'error');
+        }
+        document.body.removeChild(temp);
+    }
+
+    // --- 快捷预设 ---
+    function applyPreset(presetType) {
+        switch (presetType) {
+            case 'url':
+                DOM.qrContentInput.value = 'https://www.example.com';
+                DOM.qrTitleInput.value = '演示网站链接';
+                break;
+            case 'wifi':
+                DOM.qrContentInput.value = 'WIFI:S:HQ-Office-5G;T:WPA;P:Password8888;;';
+                DOM.qrTitleInput.value = '办公室 Wi-Fi';
+                break;
+            case 'text':
+                DOM.qrContentInput.value = '欢迎使用 HQ 二维码生成与本地管理工具！';
+                DOM.qrTitleInput.value = '测试纯文本';
+                break;
+            case 'contact':
+                DOM.qrContentInput.value = 'BEGIN:VCARD\nVERSION:3.0\nFN:李明\nTITLE:产品经理\nTEL:13800008888\nEMAIL:liming@example.com\nEND:VCARD';
+                DOM.qrTitleInput.value = '个人电子名片';
+                break;
+        }
+        updateCharCount();
+        renderPreview(false);
+        ToastManager.show('已载入快捷模板', 'info');
+    }
+
+    function updateCharCount() {
+        DOM.charCounter.textContent = `字符数: ${DOM.qrContentInput.value.length}`;
+    }
+
+    // --- 事件绑定 ---
+    function bindEvents() {
+        DOM.themeToggleBtn.addEventListener('click', toggleTheme);
+
+        DOM.qrContentInput.addEventListener('input', () => {
+            updateCharCount();
+            activeRecordId = null;
+            DOM.activeRecordTag.textContent = '实时预览';
+            clearTimeout(autoPreviewTimer);
+            autoPreviewTimer = setTimeout(() => renderPreview(false), 200);
+        });
+
+        DOM.qrTitleInput.addEventListener('input', () => activeRecordId = null);
+
+        DOM.clearContentBtn.addEventListener('click', () => {
+            DOM.qrContentInput.value = '';
+            DOM.qrTitleInput.value = '';
+            updateCharCount();
+            activeRecordId = null;
+            renderPreview(false);
+        });
+
+        DOM.fgColorInput.addEventListener('input', (e) => {
+            DOM.fgHexInput.value = e.target.value;
+            renderPreview(false);
+        });
+        DOM.fgHexInput.addEventListener('change', (e) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                DOM.fgColorInput.value = e.target.value;
+                renderPreview(false);
+            }
+        });
+
+        DOM.bgColorInput.addEventListener('input', (e) => {
+            DOM.bgHexInput.value = e.target.value;
+            renderPreview(false);
+        });
+        DOM.bgHexInput.addEventListener('change', (e) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                DOM.bgColorInput.value = e.target.value;
+                renderPreview(false);
+            }
+        });
+
+        DOM.eclSelect.addEventListener('change', () => renderPreview(false));
+        
+        DOM.cellSizeInput.addEventListener('input', (e) => {
+            DOM.cellSizeVal.textContent = e.target.value + 'px';
+            renderPreview(false);
+        });
+
+        DOM.marginInput.addEventListener('input', (e) => {
+            DOM.marginVal.textContent = e.target.value;
+            renderPreview(false);
+        });
+
+        DOM.generateBtn.addEventListener('click', () => {
+            if (!DOM.qrContentInput.value.trim()) {
+                ToastManager.show('请先输入二维码内容！', 'error');
+                DOM.qrContentInput.focus();
+                return;
+            }
+            renderPreview(true);
+        });
+
+        DOM.resetFormBtn.addEventListener('click', () => {
+            DOM.qrContentInput.value = '';
+            DOM.qrTitleInput.value = '';
+            DOM.fgColorInput.value = '#0f172a';
+            DOM.fgHexInput.value = '#0f172a';
+            DOM.bgColorInput.value = '#ffffff';
+            DOM.bgHexInput.value = '#ffffff';
+            DOM.eclSelect.value = 'M';
+            DOM.cellSizeInput.value = 8;
+            DOM.cellSizeVal.textContent = '8px';
+            DOM.marginInput.value = 4;
+            DOM.marginVal.textContent = '4';
+            activeRecordId = null;
+            updateCharCount();
+            renderPreview(false);
+            ToastManager.show('已重置所有设置选项', 'info');
+        });
+
+        DOM.downloadPngBtn.addEventListener('click', downloadPNG);
+        DOM.downloadSvgBtn.addEventListener('click', downloadSVG);
+        DOM.copyImageBtn.addEventListener('click', copyImageToClipboard);
+        DOM.copyTextBtn.addEventListener('click', () => copyTextToClipboard(DOM.qrContentInput.value));
+
+        DOM.presetChips.forEach(chip => {
+            chip.addEventListener('click', () => applyPreset(chip.dataset.preset));
+        });
+
+        DOM.historySearchInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            DOM.clearSearchBtn.style.display = val ? 'block' : 'none';
+            refreshHistoryUI();
+        });
+
+        DOM.clearSearchBtn.addEventListener('click', () => {
+            DOM.historySearchInput.value = '';
+            DOM.clearSearchBtn.style.display = 'none';
+            refreshHistoryUI();
+        });
+
+        DOM.clearHistoryBtn.addEventListener('click', clearAllHistory);
+
+        DOM.exportHistoryBtn.addEventListener('click', () => {
+            if (StorageManager.exportJSON(historyRecords)) {
+                ToastManager.show('历史记录 JSON 已成功导出', 'success');
+            } else {
+                ToastManager.show('暂无历史记录可导出', 'info');
+            }
+        });
+
+        DOM.importHistoryBtn.addEventListener('click', () => DOM.importFileInput.click());
+        DOM.importFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                StorageManager.importJSON(e.target.files[0], (err, imported) => {
+                    if (err) {
+                        ToastManager.show('解析 JSON 文件失败: ' + err.message, 'error');
+                        return;
+                    }
+                    let count = 0;
+                    imported.forEach(item => {
+                        if (item.content && !historyRecords.some(r => r.id === item.id)) {
+                            historyRecords.push(item);
+                            count++;
+                        }
+                    });
+                    historyRecords.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    StorageManager.saveHistory(historyRecords);
+                    refreshHistoryUI();
+                    ToastManager.show(`成功导入 ${count} 条历史记录`, 'success');
+                });
+                e.target.value = '';
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})(window);
