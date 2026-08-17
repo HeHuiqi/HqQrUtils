@@ -19,6 +19,8 @@
      - **Web ➔ Native**：Web 页面中新生成的二维码自动通过 `syncWebRecordToNative` 同步写入原生数据库，实现 Web 界面与原生 `ScanHistoryActivity` 历史数据 100% 双向互通。
    - **移动端 H5 冗余模块精简**：由于原生 `ScanActivity` 已包含相册识别功能，在 Android App 容器中通过 `.is-android-app .drop-zone { display: none; }` 自动隐藏 H5 中重复的“点击/拖拽上传”模块。
    - **工程过滤规则优化 (.gitignore)**：更新根目录与安卓子目录 `.gitignore`，规范忽略了 `.gradle/` 编译缓存、`.idea/` IDE 配置、`local.properties` 本地 SDK 路径、`app/build/` 编译产物以及自动生成的 `assets/public/` Web 缓存。
+   - **URL Scheme 唤起跳转配置 (`ScanActivity.kt`)**：将 `voghion://approuter/home` 的 URL Scheme `<intent-filter>` 唤起入口从 `MainActivity` 迁移配置到原生扫码组件 [`ScanActivity`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/mobile/android/app/src/main/AndroidManifest.xml#L51-L68)，设置 `android:exported="true"`。外部触发 `voghion://approuter/...` 协议链接时将直接唤起原生极速扫码界面。
+   - ** WebView 解决 `net::ERR_UNKNOWN_URL_SCHEME` 崩溃/异常**：重写了 [`MainActivity.java`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/mobile/android/app/src/main/java/com/hq/qrutils/MainActivity.java) 的 `WebViewClient.shouldOverrideUrlLoading`。自动拦截 `intent://` 语法并解析 Intent 参数，已安装目标 App 则调起应用，未安装则自动捕获 `S.browser_fallback_url` 跳转降级网页；同时支持任意 Custom Scheme（`voghion://`、`alipays://` 等），完美解决 WebView 无法加载非 HTTP 协议的报错问题。
    - **`build_android.sh`**: 新增 Android 平台一键打包构建脚本，自动组装原生 `assets/public/` 工程目录。
 
 2. **🛠️ 自动化构建脚本与文档 (`build_script/` & `build.md`)**

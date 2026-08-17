@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
@@ -67,7 +68,6 @@ class ScanActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
-            // 将 ScanResultActivity 的扫码结果透传给 MainActivity (WebView)
             setResult(RESULT_OK, result.data)
             finish()
         } else {
@@ -85,6 +85,11 @@ class ScanActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 检查是否通过 URL Scheme (如 voghion://approuter/home) 唤起 ScanActivity
+        intent?.data?.let { uri ->
+            Log.d("ScanActivity", "📱 成功通过 URL Scheme 唤起 ScanActivity: $uri")
+        }
 
         setupToolbar()
         setupListeners()

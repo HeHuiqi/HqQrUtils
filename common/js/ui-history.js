@@ -136,7 +136,33 @@
             details.appendChild(snippet);
             details.appendChild(meta);
 
-            // 操作按钮区
+            // 右侧容器（包含右上角“打开”按钮与垂直居中的操作按钮组）
+            const rightWrapper = document.createElement('div');
+            rightWrapper.className = 'history-right-wrapper';
+
+            // 检查文本是否包含 :// 协议（如 http://, https://, voghion://, intent:// 等），在右上角渲染 <a> 超链接
+            if (record.content && (record.content.includes('://') || /^https?:\/\//i.test(record.content.trim()))) {
+                const openLink = document.createElement('a');
+                openLink.className = 'history-open-btn-top';
+                openLink.href = record.content.trim();
+                openLink.target = '_blank';
+                openLink.rel = 'noopener noreferrer';
+                openLink.title = `打开链接协议: ${record.content.trim()}`;
+                openLink.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    <span>打开</span>
+                `;
+                openLink.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 仅阻止父级卡片的选择回显事件，保留原生的 <a> 标签 href 导航
+                });
+                rightWrapper.appendChild(openLink);
+            }
+
+            // 操作按钮区 (垂直居中：收藏、复制、删除)
             const actions = document.createElement('div');
             actions.className = 'history-actions';
 
@@ -183,10 +209,11 @@
             actions.appendChild(starBtn);
             actions.appendChild(copyBtn);
             actions.appendChild(deleteBtn);
+            rightWrapper.appendChild(actions);
 
             card.appendChild(thumbContainer);
             card.appendChild(details);
-            card.appendChild(actions);
+            card.appendChild(rightWrapper);
 
             // 点击查看回显
             card.addEventListener('click', () => {

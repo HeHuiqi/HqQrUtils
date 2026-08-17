@@ -1,6 +1,7 @@
 package com.hq.qrutils;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -12,14 +13,17 @@ import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import java.net.URISyntaxException;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -57,7 +61,20 @@ public class MainActivity extends AppCompatActivity {
         // 注册 Android 原生 JS 桥接对象 AndroidNative
         webView.addJavascriptInterface(new WebAppInterface(this), "AndroidNative");
 
-        webView.setWebViewClient(new WebViewClient());
+        // 配置支持 Custom Scheme (voghion://) 及 intent:// 协议的 WebViewClient (解决 net::ERR_UNKNOWN_URL_SCHEME)
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return handleCustomSchemeOrIntent(view, url);
+            }
+
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                return handleCustomSchemeOrIntent(view, url);
+            }
+        });
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -96,6 +113,68 @@ public class MainActivity extends AppCompatActivity {
 
         // 加载 Web 主应用入口
         webView.loadUrl("file:///android_asset/public/index.html");
+    }
+
+    /**
+     * 处理 Custom Scheme (如 voghion://) 与 intent:// 语法 URL
+     * 解决 WebView 报 net::ERR_UNKNOWN_URL_SCHEME 异常
+     */
+    private boolean handleCustomSchemeOrIntent(WebView view, String url) {
+        if (url == null) return false;
+
+        // 如果是标准的网页或基础协议，交由 WebView 内部加载处理
+        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file://") || url.startsWith("javascript:")) {
+            return false;
+        }
+
+        // 1. 处理 intent:// 语法 URL (Android Chrome Intent URI)
+        if (url.startsWith("intent://")) {
+            try {
+                Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                if (intent != null) {
+                    // 检查本地是否有匹配的 App 可被拉起
+                    PackageManager packageManager = getPackageManager();
+                    if (packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null) {
+                        startActivity(intent);
+                        return true;
+                    }
+
+                    // 如果未安装目标 App，优先检查是否存在 S.browser_fallback_url 参数跳转 Fallback 网页
+                    String fallbackUrl = intent.getStringExtra("browser_fallback_url");
+                    if (fallbackUrl != null && !fallbackUrl.isEmpty()) {
+                        view.loadUrl(fallbackUrl);
+                        return true;
+                    }
+
+                    // 尝试通过 Package 包名调起应用商店
+                    String packageName = intent.getPackage();
+                    if (packageName != null && !packageName.isEmpty()) {
+                        try {
+                            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + packageName)));
+                            return true;
+                        } catch (Exception e) {
+                            Toast.makeText(MainActivity.this, "未安装目标应用: " + packageName, Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
+                    }
+                }
+            } catch (URISyntaxException e) {
+                Toast.makeText(MainActivity.this, "Intent 协议解析失败", Toast.LENGTH_SHORT).show() ;
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(MainActivity.this, "未找到可响应此 Intent 的应用", Toast.LENGTH_SHORT).show();
+            }
+            return true; // 已原生截获处理，防止 WebView 报错 net::ERR_UNKNOWN_URL_SCHEME
+        }
+
+        // 2. 处理其他 Custom Scheme 协议 (如 voghion://, alipays://, weixin://, myapp://)
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(intent);
+            return true;
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(MainActivity.this, "未安装响应 " + Uri.parse(url).getScheme() + " 协议的应用", Toast.LENGTH_SHORT).show();
+            return true; // 已原生截获处理
+        }
     }
 
     /**

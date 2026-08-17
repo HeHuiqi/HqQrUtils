@@ -37,13 +37,25 @@
             </intent-filter>
         </activity>
 
-        <!-- 2. 原生 CameraX & ML Kit 扫码 Activity (Web 桥接唤起) -->
+        <!-- 2. 原生 CameraX & ML Kit 扫码 Activity (可被 URL Scheme 协议直接唤起或 Web 桥接唤起) -->
         <activity
             android:name=".ScanActivity"
             android:configChanges="orientation|keyboardHidden|screenSize|locale"
             android:label="@string/scan_title"
             android:theme="@style/AppTheme"
-            android:exported="false" />
+            android:exported="true">
+
+            <!-- URL Scheme 唤起配置配置在 ScanActivity -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="qrutils"
+                    android:host="app"
+                    android:pathPrefix="/scan" />
+            </intent-filter>
+        </activity>
 
         <!-- 3. 原生扫码结果展示与历史保存 Activity -->
         <activity
