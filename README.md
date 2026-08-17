@@ -2,7 +2,7 @@
 
 一个功能强大、设计现代、全离线运行的二维码生成与历史记录管理工具。采用 Monorepo 多端架构设计，完美支持作为 **Web 网页端**、**Chrome 浏览器扩展程序 (Manifest V3)** 以及 **Android 原生 App (Kotlin + CameraX + ML Kit)** 跨平台运行。
 
-![HQ QR Utils Banner](icons/icon128.png)
+![HQ QR Utils Banner](chrome_ext/icons/icon128.png)
 
 ---
 
