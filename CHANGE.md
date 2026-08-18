@@ -28,50 +28,50 @@
    - **`build_chrome_ext.sh`**: 自动化构建 Manifest V3 Chrome 扩展，输出解压版扩展工程到 `build/chrome_ext/` 并打包压缩为可直接发行的 `build/chrome_ext.zip`。
    - **[`build.md`](file:///Users/edy/Desktop/1hhq/1AItools/HqQrUtils/build.md)**: 增加多端打包构建流程与 Chrome 扩展/Web 服务器部署说明文档。
 
-2. **📂 多端分层代码架构重构 (`common/`, `web/`, `chrome_ext/`, `mobile/`)**
-   - **`common/`**: 抽象抽取通用核心引擎 (`QREngine`)、抽象存储适配器 (`StorageAdapter`)、Toast 通用组件与历史渲染模型。
+3. **📂 多端分层代码架构重构 (`common/`, `web/`, `chrome_ext/`, `mobile/`)**
+   - **`common/`**: 抽取通用核心引擎 (`QREngine`)、统一存储服务 (`StorageManager`)、Toast 通用组件与历史渲染模型。
    - **`web/`**: 独立 Web 部署版工程。
    - **`chrome_ext/`**: Chrome 扩展独立工程（包含 Manifest V3、Service Worker、图标与插件初始化控制器）。
    - **`mobile/`**: 移动端 App Capacitor 打包工程（包含移动端 Tab 导航、安全区域适配与原生 Bridge 适配器）。
    - **根目录纯净归类**：彻底清理了根目录下的旧冗余文件与文件夹（如旧 `css/`, `js/`, `lib/`, `icons/` 等），结构更加规范纯粹。
 
-3. **🎨 像素级 UI 细节对齐与标点修复**
+4. **🎨 像素级 UI 细节对齐与标点修复**
    - 对齐 `二维码生成器` 品牌 Header 栏与右侧 `已保存 X 条记录` Badge 胶囊。
    - 恢复 `.preview-viewport` 浅灰蓝背景容器与 2×2 网格布局导出按钮组。
    - 规范了空历史记录提示文字中的全角中文双引号：`点击“生成并保存记录”即可自动记录至本地`。
 
-2. **Chrome 右键菜单快捷生成 (Context Menu Integration)**
+5. **Chrome 右键菜单快捷生成 (Context Menu Integration)**
    - 在 Chrome 扩展中增加了右键上下文菜单支持：
      - **右键选中文本** ➔ `为选中文本 "%s" 生成二维码`
      - **右键网页链接** ➔ `为此链接生成二维码`
      - **右键网页空白处** ➔ `为当前页面网址生成二维码`
    - 点击右键菜单后，直接唤起主标签页载入文本并完成保存，无需手动复制粘贴。
 
-2. **二维码图片与摄像头实时解码 (QR Code Decoder & Camera Scanner)**
+6. **二维码图片与摄像头实时解码 (QR Code Decoder & Camera Scanner)**
    - **图片识别**：支持切换至“识别二维码”模式，拖拽图片文件、点击上传或使用键盘快捷键 `Ctrl+V` / `Cmd+V` 粘贴截图识别。
    - **📷 摄像头实时扫描**：支持开启手机/笔记本摄像头进行实时扫码，带有精致的绿光激光扫描对焦框与自动侦测闭环。
    - **高效解析**：内置 Chrome 原生 `BarcodeDetector` 与离线解析双引擎，秒级解析出文本或网页链接。
    - **一键联动**：识别结果支持一键复制文本、直接在新标签页打开链接、或一键导入生成器重新设计。
 
-3. **⭐ 历史记录星标收藏与置顶 (Favorites & Top Pinning)**
+7. **⭐ 历史记录星标收藏与置顶 (Favorites & Top Pinning)**
    - 每条历史记录卡片增加 `★` / `☆` 星标按钮。
    - 点击可一键为高频使用的二维码（如办公 Wi-Fi、个人主页）打上星标。
    - 标注星标的记录会自动获得**左侧金黄高亮边线**并**自动优先置顶**排列在最上方。
 
-4. **🏷️ 历史记录分类标签管理与筛选 (Category Tag Filtering)**
+8. **🏷️ 历史记录分类标签管理与筛选 (Category Tag Filtering)**
    - 生成/编辑二维码时支持指定所属分类标签（如：`💼 工作`、`👤 个人`、`📶 网络`、`🧪 测试`）。
    - 历史记录栏新增分类标签筛选栏（Category Chips），点击 `⭐ 收藏`、`💼 工作`、`👤 个人` 等标签可一键即时过滤显示。
 
-5. **💄 界面布局与滚动条稳定性优化 (Layout & Spacing Tweak)**
+9. **💄 界面布局与滚动条稳定性优化 (Layout & Spacing Tweak)**
    - 优化三栏比例与历史卡片 Flex 截断，增加 `scrollbar-gutter: stable` 消除分类切换时的宽度抖动。
    - 为左侧“所属分类标签”控件增加上下合适间距，界面更加精致舒展。
 
-6. **中心 Logo 图标嵌入 (Center Logo Overlay)**
+10. **中心 Logo 图标嵌入 (Center Logo Overlay)**
    - 高级设置中新增 **“中心 Logo 图标”** 上传控件。
    - 支持上传自定义 PNG/JPG/SVG 图片置于二维码正中央。
    - 上传 Logo 时会自动将纠错等级设为最高级 **H (30%)**，并在 Canvas 中央绘制带轮廓边框的隔离遮罩，保障带 Logo 的二维码 100% 完美扫描。
 
-4. **扩展数据防擦除保护机制 (`chrome.storage.local`)**
+11. **扩展数据防擦除保护机制 (`chrome.storage.local`)**
    - 存储服务升级为优先使用 `chrome.storage.local` API。
    - 在 Chrome 扩展模式下，即便用户执行了浏览器的“清理 Cookies 和网站缓存”，历史生成记录也**不会被误删**。
 

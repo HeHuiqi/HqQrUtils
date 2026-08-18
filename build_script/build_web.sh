@@ -27,6 +27,5 @@ cp "$ROOT_DIR/common/style.css" "$BUILD_DIR/style.css"
 # 3. 复制 Web 入口文件
 echo "📄 正在处理 web/ 入口网页与业务逻辑..."
 cp "$ROOT_DIR/web/index.html" "$BUILD_DIR/index.html"
-cp -r "$ROOT_DIR/chrome_ext/js/"* "$BUILD_DIR/js/"
 
 echo "✅ [Build Web] 打包完成！独立运行包目录: $BUILD_DIR"

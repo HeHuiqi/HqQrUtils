@@ -32,3 +32,4 @@ captures/
 # OS Metadata
 .DS_Store
 Thumbs.db
+.poolside/

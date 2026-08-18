@@ -33,7 +33,10 @@ cp "$ROOT_DIR/chrome_ext/manifest.json" "$BUILD_DIR/manifest.json"
 cp "$ROOT_DIR/chrome_ext/background.js" "$BUILD_DIR/background.js"
 cp -r "$ROOT_DIR/chrome_ext/icons/"* "$BUILD_DIR/icons/"
 cp "$ROOT_DIR/chrome_ext/index.html" "$BUILD_DIR/index.html"
-cp -r "$ROOT_DIR/chrome_ext/js/"* "$BUILD_DIR/js/"
+# 复制 chrome_ext 专属 JS (如有) — 目前入口 HTML 统一引用 common/js/app.js
+if [ -d "$ROOT_DIR/chrome_ext/js" ] && [ -n "$(ls -A "$ROOT_DIR/chrome_ext/js" 2>/dev/null)" ]; then
+    cp -r "$ROOT_DIR/chrome_ext/js/"* "$BUILD_DIR/js/"
+fi
 
 # 4. 打包成可直接上架/发行的 Zip 压缩包
 if command -v zip >/dev/null 2>&1; then

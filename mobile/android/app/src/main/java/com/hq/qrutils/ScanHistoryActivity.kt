@@ -107,7 +107,7 @@ class ScanHistoryActivity : AppCompatActivity() {
             .setMessage("确定要删除此条记录吗？")
             .setPositiveButton("删除") { _, _ ->
                 lifecycleScope.launch {
-                    withContext(Dispatchers.IO) { dao.clearAll() }
+                    withContext(Dispatchers.IO) { dao.delete(record) }
                     loadHistoryRecords()
                     Toast.makeText(this@ScanHistoryActivity, "已删除记录", Toast.LENGTH_SHORT).show()
                 }
