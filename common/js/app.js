@@ -406,8 +406,16 @@
     }
 
     function deleteRecord(id) {
+        const targetRecord = historyRecords.find(item => item.id === id);
+
         historyRecords = historyRecords.filter(item => item.id !== id);
         StorageManager.saveHistory(historyRecords);
+
+        // 如果运行在 Android App 容器中，同步从原生 SQLite 数据库中删除该记录
+        if (targetRecord && targetRecord.content && window.AndroidNative && window.AndroidNative.deleteWebRecordFromNative) {
+            window.AndroidNative.deleteWebRecordFromNative(targetRecord.content, targetRecord.createdAt || 0);
+        }
+
         if (activeRecordId === id) {
             activeRecordId = null;
             DOM.activeRecordTag.textContent = '新建生成';
@@ -422,6 +430,12 @@
             historyRecords = [];
             activeRecordId = null;
             StorageManager.saveHistory(historyRecords);
+
+            // 如果运行在 Android App 容器中，同步清空原生 SQLite 数据库中的所有记录
+            if (window.AndroidNative && window.AndroidNative.clearAllNativeRecords) {
+                window.AndroidNative.clearAllNativeRecords();
+            }
+
             refreshHistoryUI();
             DOM.activeRecordTag.textContent = '新建生成';
             ToastManager.show('已清空所有历史记录', 'info');

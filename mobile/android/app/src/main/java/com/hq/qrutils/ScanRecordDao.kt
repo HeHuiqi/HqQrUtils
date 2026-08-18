@@ -17,6 +17,16 @@ interface ScanRecordDao {
     @Query("SELECT * FROM scan_records ORDER BY isFavorite DESC, timeMillis DESC")
     suspend fun getAllRecords(): List<ScanRecord>
 
+    /** 根据 timeMillis 删除 (Web 端记录的 createdAt 与 Native 同步时作为关联键) */
+    @Query("DELETE FROM scan_records WHERE timeMillis = :timeMillis")
+    fun deleteByTimeMillis(timeMillis: Long): Int
+
+    @Query("DELETE FROM scan_records WHERE content = :content")
+    fun deleteByContentSync(content: String)
+
+    @Query("DELETE FROM scan_records")
+    fun clearAllSync()
+
     @Delete
     suspend fun delete(record: ScanRecord)
 

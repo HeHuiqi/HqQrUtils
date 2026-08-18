@@ -204,6 +204,28 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public void deleteWebRecordFromNative(String content, long timeMillis) {
+            if (content == null || content.isEmpty()) return;
+            new Thread(() -> {
+                ScanRecordDao dao = ScanDatabase.getInstance(MainActivity.this).scanRecordDao();
+                // 优先按 timeMillis 精确匹配 (Web 生成记录的 createdAt 与 Native 同步时的 timeMillis 一致)
+                int deleted = dao.deleteByTimeMillis(timeMillis);
+                if (deleted == 0) {
+                    // timeMillis 未匹配到 (如 Native 扫码结果回传 Web 时 createdAt ≠ native timeMillis),
+                    // 降级按 content 匹配删除
+                    dao.deleteByContentSync(content);
+                }
+            }).start();
+        }
+
+        @JavascriptInterface
+        public void clearAllNativeRecords() {
+            new Thread(() -> {
+                ScanDatabase.getInstance(MainActivity.this).scanRecordDao().clearAllSync();
+            }).start();
+        }
+
+        @JavascriptInterface
         public void vibrate() {
             Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             if (v != null) v.vibrate(40);
