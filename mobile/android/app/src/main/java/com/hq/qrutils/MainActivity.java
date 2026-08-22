@@ -282,8 +282,23 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
+        if (webView != null) {
+            // 优先让 Web 层 (AndroidBridge.handleBackButton) 处理返回键
+            // JS 返回 true 表示已处理 (如关闭摄像头或双击提示)；返回 false 表示交由 Native 处理
+            webView.evaluateJavascript("typeof window.AndroidBridge !== 'undefined' && " +
+                    "typeof window.AndroidBridge.handleBackButton === 'function' ? window.AndroidBridge.handleBackButton() : false;", (value) -> {
+                boolean handled = false;
+                if (value != null && value.equals("true")) {
+                    handled = true;
+                }
+                if (!handled) {
+                    if (webView.canGoBack()) {
+                        webView.goBack();
+                    } else {
+                        super.onBackPressed();
+                    }
+                }
+            });
         } else {
             super.onBackPressed();
         }

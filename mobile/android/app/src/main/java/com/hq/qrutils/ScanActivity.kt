@@ -86,7 +86,7 @@ class ScanActivity : AppCompatActivity() {
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 检查是否通过 URL Scheme (如 voghion://approuter/home) 唤起 ScanActivity
+        // 检查是否通过 URL Scheme (如 qrutils://app/scan) 唤起 ScanActivity
         intent?.data?.let { uri ->
             Log.d("ScanActivity", "📱 成功通过 URL Scheme 唤起 ScanActivity: $uri")
         }

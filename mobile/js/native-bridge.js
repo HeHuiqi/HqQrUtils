@@ -9,6 +9,7 @@
     const AndroidBridge = {
         isNative: false,
         Capacitor: null,
+        backPressTimestamp: 0,
 
         /**
          * 初始化 Android 平台桥接能力
@@ -137,9 +138,53 @@
 
         /**
          * 监听 Android 物理返回键
+         * 逻辑：优先关闭摄像头扫描会话视口；若位于首页则双击返回键提示退出应用。
+         * Native (MainActivity) 通过 evaluateJavascript 调用 window.AndroidBridge.handleBackButton()
+         * JS 返回 true 表示已处理 (Native 不应返回)；返回 false 表示交由 Native 处理。
          */
         setupBackButtonListener() {
-            // Web 页面中已处理常规导航
+            // Capacitor 物理返回键监听 (Capacitor 环境下)
+            if (this.Capacitor && this.Capacitor.Plugins && this.Capacitor.Plugins.App) {
+                this.Capacitor.Plugins.App.addListener('backButton', () => {
+                    const handled = AndroidBridge.handleBackButton();
+                    if (!handled && this.Capacitor.Plugins.App.backButton) {
+                        this.Capacitor.Plugins.App.backButton.closeApp();
+                    }
+                });
+            }
+        },
+
+        /**
+         * 处理返回键事件
+         * @returns {boolean} true 表示 JS 已处理，false 表示交由 Native 处理
+         */
+        handleBackButton() {
+            // 1. 优先关闭摄像头扫描会话视口
+            const cameraViewport = document.getElementById('cameraViewport');
+            if (cameraViewport && cameraViewport.style.display === 'flex') {
+                const closeCameraBtn = document.getElementById('closeCameraBtn');
+                if (closeCameraBtn) {
+                    closeCameraBtn.click();
+                }
+                return true; // JS 已处理
+            }
+
+            // 2. 检查是否在首页 (无查询参数)
+            const params = new URLSearchParams(window.location.search);
+            if (params.toString() === '') {
+                const now = Date.now();
+                if (this.backPressTimestamp && (now - this.backPressTimestamp < 2000)) {
+                    // 第二次按下，交由 Native 退出应用
+                    this.backPressTimestamp = 0;
+                    return false;
+                }
+                this.backPressTimestamp = now;
+                this.showToast('再按一次退出 HQ 二维码工具箱');
+                return true; // JS 已处理，阻止 Native 返回
+            }
+
+            // 3. 非首页，交由 Native 处理 WebView 回退
+            return false;
         }
     };
 
