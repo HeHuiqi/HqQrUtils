@@ -317,6 +317,11 @@
         DOM.copyTextBtn.disabled = !enabled;
     }
 
+    // --- 生成全局唯一记录 ID (统一格式, 避免不同来源记录 ID 冲突) ---
+    function generateRecordId() {
+        return 'qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    }
+
     // --- 保存记录 ---
     function saveRecord(options) {
         const now = Date.now();
@@ -326,7 +331,7 @@
         }
 
         const newRecord = {
-            id: 'qr_' + now + '_' + Math.random().toString(36).substring(2, 7),
+            id: generateRecordId(),
             title: displayTitle,
             content: options.content,
             category: options.category || 'none',
@@ -845,17 +850,18 @@
     }
 
     // 暴露给 Android 原生 ScanActivity / MainActivity 调用的扫码成功回调
-    window.onNativeScanSuccess = function (resultText) {
+    // 第二个参数 timeMillis 为原生扫码时刻 (与原生 SQLite 库中记录的时间戳一致, 用于删除时精确匹配)
+    window.onNativeScanSuccess = function (resultText, timeMillis) {
         if (!resultText) return;
         console.log('📱 [Web Native Callback] 收到原生扫码识别结果:', resultText);
 
         const newRecord = {
-            id: Date.now().toString(),
+            id: generateRecordId(),
             title: '原生扫码识别',
             content: resultText,
             category: 'none',
             isFavorite: false,
-            createdAt: Date.now()
+            createdAt: timeMillis || Date.now()
         };
 
         historyRecords.unshift(newRecord);

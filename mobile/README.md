@@ -40,19 +40,9 @@
 
 ## 🛠️ 3. 生成 APK 安装包 (Generate APK)
 
-运行构建脚本后，可通过以下两种常见方式打包 APK：
+运行构建脚本后，可直接使用 Android Gradle 编译 APK：
 
-### 方法 A：使用 Capacitor CLI 命令行
-```bash
-# 1. 进入 mobile 目录同步平台配置
-cd mobile
-npx cap sync android
-
-# 2. 打开 Android Studio 编译生成 APK
-npx cap open android
-```
-
-### 方法 B：直接使用 Android Gradle 编译 Debug/Release APK
+### 使用 Android Gradle 编译 Debug/Release APK
 ```bash
 cd mobile/android
 ./gradlew assembleDebug

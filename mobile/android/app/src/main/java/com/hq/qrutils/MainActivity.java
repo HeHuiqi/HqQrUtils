@@ -272,9 +272,10 @@ public class MainActivity extends AppCompatActivity {
         } else if (requestCode == SCAN_ACTIVITY_REQUEST_CODE) {
             if (resultCode == RESULT_OK && data != null) {
                 String scanResult = data.getStringExtra("scan_result");
+                long scanTimeMillis = data.getLongExtra("scan_time_millis", 0L);
                 if (scanResult != null && !scanResult.isEmpty()) {
                     String safeResult = scanResult.replace("'", "\\'").replace("\n", "\\n");
-                    webView.post(() -> webView.evaluateJavascript("if(window.onNativeScanSuccess) window.onNativeScanSuccess('" + safeResult + "');", null));
+                    webView.post(() -> webView.evaluateJavascript("if(window.onNativeScanSuccess) window.onNativeScanSuccess('" + safeResult + "', " + scanTimeMillis + ");", null));
                 }
             }
         }
