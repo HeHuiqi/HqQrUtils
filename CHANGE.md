@@ -4,7 +4,47 @@
 
 ---
 
-## 🚀 [v1.1.0] - 2026-08-14 (最新功能更新)
+## 🚀 [v1.2.0] - 2026-08-24 (最新：安全加固与稳定性修复)
+
+> 本版本聚焦**安全基线加固**与**数据同步稳定性**，经多轮全量代码审查后发布。建议同步升级 Android `versionName` 至 `1.2.0`（`mobile/android/app/build.gradle`）。
+
+### 🔒 安全加固 (Security Hardening)
+
+1. **CSP 内容安全策略 (Content Security Policy)**
+   - 三端（Web / Chrome 扩展 / Android assets）HTML 统一注入 CSP `<meta>` 标签：
+     - `default-src 'self'` 严格默认源
+     - `script-src 'self'`（**无** `'unsafe-inline'`，杜绝内联脚本 XSS 面）
+     - `style-src 'self' 'unsafe-inline'`（保留，JS 动态样式依赖）
+     - `img-src`/`media-src` 白名单 `data:`/`blob:`/`mediastream:`（扫码预览与生成导出所需）
+     - `connect-src 'self'`（无外部请求面）
+2. **Android 权限最小化与隐私收紧**
+   - 移除冗余存储权限 `READ/WRITE_EXTERNAL_STORAGE`（targetSdk 34 下无效，导入导出走 SAF `OPEN/CREATE_DOCUMENT`）
+   - `android:allowBackup="false"`：本地历史数据库不再可被 `adb backup` 提取
+   - 移除 `android:usesCleartextTraffic="true"`：WebView 仅加载本地 `file://` 资源，外部链接一律走系统浏览器，杜绝明文流量
+3. **WebView 注入转义统一**：`MainActivity.java` 全部 `evaluateJavascript` 改用 `JSONObject.quote()` 序列化（原生扫码结果、数据库同步、字段 JSON），替换手写 `replace()` 转义，杜绝引号/换行注入破坏 JS 语句
+4. **历史记录链接协议校验 (`isSafeSchemeUrl`)**：严格拦截 `javascript:` / `data:` / `vbscript:` / `file:` 等危险伪协议，仅放行 `http/https` 与业务 Custom Scheme（`voghion://`、`alipays://`、`weixin://`、`intent://` 等）
+
+### 🐛 缺陷修复 (Bug Fixes)
+
+1. **修复 Toast 组件崩溃 (`ui-toast.js`)**：`iconHtml` 未定义导致每次 `ToastManager.show()` 抛 `ReferenceError`、所有 Toast 静默失效——按 `type` 映射语义图标（✅/❌/ℹ️/⚠️），纯文本渲染
+2. **修复原生清空历史后 Web 数据"复活" (`app.js`)**：新增 `isInitialNativeSync` 状态机——
+   - **首次启动**（原生空库）：Web 本地记录**冷迁移**反向推送至原生，数据不丢失
+   - **非首次**（用户手动清空原生历史）：同步清空 Web 端，删除操作不再回弹复活
+3. **统一历史记录 ID 为 RFC4122 v4 UUID (`generateRecordId`)**：优先 `crypto.randomUUID()`，兜底手写 v4 生成，两端（Web/原生）严格一致的唯一主键格式
+
+### ⚙️ 架构与工程优化 (Architecture & Engineering)
+
+1. **双向同步机制明确为「Native 为主库」**：
+   - **Native ➔ Web**：原生扫码/删除/清空后经 `onResume → syncNativeDatabaseToWeb` 即时同步
+   - **Web ➔ Native**：生成/修改/收藏/删除均即时单条推送（`syncWebRecordToNative` / `toggleFavoriteNative` / `deleteWebRecordFromNative`）
+   - 原生单条删除依赖「合并剔除」机制即时生效，删除操作不再复活
+2. **`build_android.sh` 跨平台注入**：HTML 注入改用 `perl -i -pe`（兼容 macOS BSD 与 Linux GNU sed），保留 `sed` 兜底
+3. **DAO 接口弃用标注**：`ScanRecordDao.deleteByContentSync` 标记 `@Deprecated`，统一走 `deleteById(id)` 主键精确删除
+4. **清理调试日志**：移除 `app.js` / `native-bridge.js` 全部 `console.log` 调试输出（保留合理的 `console.error/warn` 错误日志）
+
+---
+
+## 🚀 [v1.1.0] - 2026-08-14 (功能更新)
 
 ### ✨ 新增功能 (New Features)
 
