@@ -12,8 +12,9 @@
     let autoPreviewTimer = null;
     let currentLogoImage = null;
     let cameraStream = null;
-    let cameraScanInterval = null;
+    let cameraScanTimer = null;
     let isCameraActive = false;
+    let isDecodingFrame = false;
     let currentCategoryFilter = 'all';
     let lastNativeScanTime = 0;
     let lastNativeScanResult = '';
@@ -194,19 +195,42 @@
             DOM.cameraBtnText.textContent = '关闭摄像头扫描';
             ToastManager.show('已开启摄像头，请将二维码放入对焦框中', 'info');
 
-            clearInterval(cameraScanInterval);
-            cameraScanInterval = setInterval(async () => {
-                if (!isCameraActive || DOM.cameraVideo.paused || DOM.cameraVideo.ended) return;
+            if (cameraScanTimer) {
+                clearTimeout(cameraScanTimer);
+                cameraScanTimer = null;
+            }
+            isDecodingFrame = false;
 
-                try {
-                    const decodedText = await QREngine.decodeVideo(DOM.cameraVideo);
-                    if (decodedText) {
-                        stopCameraScan();
-                        showDecodeResult(decodedText);
-                        ToastManager.show('实时扫码识别成功！', 'success');
-                    }
-                } catch (e) {}
-            }, 150);
+            const scanFrame = () => {
+                if (!isCameraActive || !DOM.cameraVideo || DOM.cameraVideo.paused || DOM.cameraVideo.ended) {
+                    return;
+                }
+
+                if (isDecodingFrame) {
+                    cameraScanTimer = setTimeout(scanFrame, 100);
+                    return;
+                }
+
+                isDecodingFrame = true;
+                QREngine.decodeVideo(DOM.cameraVideo)
+                    .then((decodedText) => {
+                        if (decodedText && isCameraActive) {
+                            stopCameraScan();
+                            showDecodeResult(decodedText);
+                            ToastManager.show('实时扫码识别成功！', 'success');
+                        }
+                    })
+                    .catch(() => {})
+                    .finally(() => {
+                        isDecodingFrame = false;
+                        if (isCameraActive) {
+                            cameraScanTimer = setTimeout(scanFrame, 150);
+                        }
+                    });
+            };
+
+            // 启动首帧扫描
+            cameraScanTimer = setTimeout(scanFrame, 150);
 
         } catch (err) {
             console.error('Camera Access Error:', err);
@@ -217,7 +241,11 @@
 
     function stopCameraScan() {
         isCameraActive = false;
-        clearInterval(cameraScanInterval);
+        isDecodingFrame = false;
+        if (cameraScanTimer) {
+            clearTimeout(cameraScanTimer);
+            cameraScanTimer = null;
+        }
 
         if (cameraStream) {
             cameraStream.getTracks().forEach(track => track.stop());
@@ -237,13 +265,19 @@
     }
 
     // --- 主题控制 ---
-    function initTheme() {
-        const savedTheme = StorageManager.getTheme();
-        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    function applyTheme(theme) {
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.body.classList.replace('theme-light', 'theme-dark');
         } else {
             document.body.classList.replace('theme-dark', 'theme-light');
         }
+    }
+
+    function initTheme() {
+        const savedTheme = StorageManager.getTheme((asyncTheme) => {
+            if (asyncTheme) applyTheme(asyncTheme);
+        });
+        applyTheme(savedTheme);
     }
 
     function toggleTheme() {

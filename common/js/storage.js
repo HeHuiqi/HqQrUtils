@@ -17,10 +17,17 @@
         loadHistory(callback) {
             if (window.chrome && chrome.storage && chrome.storage.local) {
                 chrome.storage.local.get([STORAGE_KEY], (result) => {
-                    if (result && Array.isArray(result[STORAGE_KEY])) {
-                        callback(result[STORAGE_KEY]);
+                    const chromeData = result ? result[STORAGE_KEY] : null;
+                    const localData = StorageManager.fallbackLoadFromLocalStorage();
+                    if (Array.isArray(chromeData) && chromeData.length > 0) {
+                        callback(chromeData);
+                    } else if (Array.isArray(localData) && localData.length > 0) {
+                        // 自动迁移 localStorage 备份至 chrome.storage.local
+                        chrome.storage.local.set({ [STORAGE_KEY]: localData }, () => {
+                            callback(localData);
+                        });
                     } else {
-                        callback(StorageManager.fallbackLoadFromLocalStorage());
+                        callback(Array.isArray(chromeData) ? chromeData : (localData || []));
                     }
                 });
             } else {
@@ -65,31 +72,51 @@
         },
 
         /**
-         * 保存与获取主题配置
+         * 保存与获取主题配置 (优先同步 chrome.storage.local 并支持 localStorage 即时读取)
          */
-        getTheme() {
-            return localStorage.getItem(THEME_KEY);
+        getTheme(callback) {
+            const localTheme = localStorage.getItem(THEME_KEY);
+            if (callback && window.chrome && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.get([THEME_KEY], (res) => {
+                    const theme = res && res[THEME_KEY] ? res[THEME_KEY] : localTheme;
+                    callback(theme);
+                });
+            }
+            return localTheme;
         },
 
         setTheme(theme) {
-            localStorage.setItem(THEME_KEY, theme);
+            try {
+                localStorage.setItem(THEME_KEY, theme);
+            } catch (e) {}
+            if (window.chrome && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set({ [THEME_KEY]: theme });
+            }
         },
 
         /**
-         * 导出历史数据为 JSON 文件
+         * 导出历史数据为 JSON 文件 (使用 Blob + URL.createObjectURL，支持超大数据量)
          */
         exportJSON(records) {
             if (!records || records.length === 0) {
                 return false;
             }
-            const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(records, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute('href', dataStr);
-            downloadAnchor.setAttribute('download', `hq_qr_history_export_${Date.now()}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            document.body.removeChild(downloadAnchor);
-            return true;
+            try {
+                const jsonString = JSON.stringify(records, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute('href', url);
+                downloadAnchor.setAttribute('download', `hq_qr_history_export_${Date.now()}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(url);
+                return true;
+            } catch (e) {
+                console.error('Failed to export JSON:', e);
+                return false;
+            }
         },
 
         /**

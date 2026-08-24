@@ -104,8 +104,11 @@
                 const srcWidth = imageElement.naturalWidth || imageElement.width || 300;
                 const srcHeight = imageElement.naturalHeight || imageElement.height || 300;
 
-                // 多尺度算法：优先使用 800px 最佳解码尺寸，随后回退至原图尺寸
-                const targetSizes = [800, Math.max(srcWidth, srcHeight)];
+                // 多尺度算法：优先使用 800px 最佳解码尺寸，随后回退至原图或安全上限尺寸 (最高 2000px，防止 4K+ 原图 OOM)
+                const MAX_SAFE_DIM = 2000;
+                const naturalMax = Math.max(srcWidth, srcHeight);
+                const safeMax = Math.min(naturalMax, MAX_SAFE_DIM);
+                const targetSizes = naturalMax > 800 ? [800, safeMax] : [naturalMax];
 
                 for (const maxDim of targetSizes) {
                     let width = srcWidth;

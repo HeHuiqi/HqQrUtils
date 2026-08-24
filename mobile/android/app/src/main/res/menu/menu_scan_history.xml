@@ -4,7 +4,9 @@
 
     <item
         android:id="@+id/action_clear"
+        android:icon="@drawable/ic_trash"
         android:title="清空历史"
-        app:showAsAction="ifRoom" />
+        app:iconTint="@android:color/white"
+        app:showAsAction="always" />
 
 </menu>
