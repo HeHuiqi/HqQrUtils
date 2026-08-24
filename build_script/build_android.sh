@@ -35,10 +35,15 @@ cp "$ROOT_DIR/mobile/js/native-bridge.js" "$ASSETS_DIR/js/native-bridge.js"
 # 5. 在 index.html 中自动注入移动端适配 CSS 与 Android Native Bridge
 if [ -f "$ASSETS_DIR/index.html" ]; then
     echo "📱 正在注入移动端适配 CSS 与 Native Bridge 到 Android index.html..."
-    # 本脚本每次都会重建 ASSETS_DIR（见上），注入前一定是全新 index.html，无需防重复
-    sed -i.bak 's|</head>|    <link rel="stylesheet" href="css/mobile-layout.css">\n</head>|g' "$ASSETS_DIR/index.html"
-    sed -i.bak 's|</body>|    <script src="js/native-bridge.js"></script>\n</body>|g' "$ASSETS_DIR/index.html"
-    rm -f "$ASSETS_DIR/index.html.bak"
+    # 使用跨平台通用的 perl 注入，兼容 macOS (BSD) 与 Linux (GNU) 环境
+    if command -v perl >/dev/null 2>&1; then
+        perl -i -pe 's|</head>|    <link rel="stylesheet" href="css/mobile-layout.css">\n</head>|g' "$ASSETS_DIR/index.html"
+        perl -i -pe 's|</body>|    <script src="js/native-bridge.js"></script>\n</body>|g' "$ASSETS_DIR/index.html"
+    else
+        sed -i.bak 's|</head>|    <link rel="stylesheet" href="css/mobile-layout.css">\n</head>|g' "$ASSETS_DIR/index.html"
+        sed -i.bak 's|</body>|    <script src="js/native-bridge.js"></script>\n</body>|g' "$ASSETS_DIR/index.html"
+        rm -f "$ASSETS_DIR/index.html.bak"
+    fi
 
     # 断言：注入后必须包含 native-bridge.js 与 mobile-layout.css 引用，否则构建失败
     if ! grep -q 'native-bridge.js' "$ASSETS_DIR/index.html"; then

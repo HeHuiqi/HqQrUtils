@@ -160,7 +160,6 @@
 
         // 1. 优先检查是否存在 Android 原生 JS 桥接对象 (直接拉起原生 CameraX & ML Kit ScanActivity)
         if (window.AndroidNative && window.AndroidNative.scanQRCode) {
-            console.log('📱 [Android Native Bridge] 触发原生 ScanActivity 扫码页面');
             window.AndroidNative.scanQRCode();
             return;
         }
@@ -939,8 +938,6 @@
         lastNativeScanResult = resultText;
         if (isDuplicate) return;
 
-        console.log('📱 [Web Native Callback] 收到原生扫码识别结果:', resultText, scanId);
-
         const recordId = (typeof scanId === 'string' && scanId.trim()) ? scanId.trim() : generateRecordId();
         const newRecord = {
             id: recordId,
@@ -983,8 +980,6 @@
         try {
             var nativeRecords = typeof nativeRecordsJson === 'string' ? JSON.parse(nativeRecordsJson) : nativeRecordsJson;
             if (!Array.isArray(nativeRecords)) return;
-
-            console.log('📱 [Web Native Sync] 收到原生数据库同步更新, 原生记录数:', nativeRecords.length);
 
             // 1. 如果原生数据库为空：
             if (nativeRecords.length === 0) {

@@ -31,6 +31,8 @@ interface ScanRecordDao {
     @Query("UPDATE scan_records SET isFavorite = :isFavorite WHERE id = :id")
     fun updateFavorite(id: String, isFavorite: Boolean): Int
 
+    /** @deprecated 旧版兼容方法，统一使用 deleteById(id) 进行主键精确删除 */
+    @Deprecated("Use deleteById(id) instead")
     @Query("DELETE FROM scan_records WHERE content = :content")
     fun deleteByContentSync(content: String)
 

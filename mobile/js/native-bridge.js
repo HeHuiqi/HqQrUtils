@@ -23,8 +23,6 @@
                 } else {
                     document.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-android-app'));
                 }
-                
-                console.log('📱 [Android Native Bridge] 运行于 Android 原生 APP 容器内');
 
                 this.bindNativeScanCallback();
 
@@ -32,8 +30,6 @@
                 if (window.AndroidNative && window.AndroidNative.requestHistorySync) {
                     window.AndroidNative.requestHistorySync();
                 }
-            } else {
-                console.log('🌐 [Android Native Bridge] 当前处于 Web / 浏览器调试环境');
             }
         },
 
@@ -55,7 +51,6 @@
             const originalCallback = window.onNativeScanSuccess;
             window.onNativeScanSuccess = function (resultText, createdAt, scanId) {
                 if (!resultText) return;
-                console.log('📱 [Native Scan Callback] 收到原生扫码识别结果:', resultText, scanId);
 
                 // 1. 优先调用 app.js 中已挂载的存储与历史列表刷新方法
                 if (typeof originalCallback === 'function') {
