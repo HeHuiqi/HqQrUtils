@@ -166,9 +166,9 @@ public class MainActivity extends AppCompatActivity {
                     jsonArray.put(obj);
                 }
                 String jsonStr = jsonArray.toString();
-                String safeJson = jsonStr.replace("\\", "\\\\").replace("'", "\\'");
+                String jsCode = String.format("if (typeof window.onNativeDatabaseSync === 'function') { window.onNativeDatabaseSync(%s); }", JSONObject.quote(jsonStr));
                 webView.post(() -> {
-                    webView.evaluateJavascript("if (typeof window.onNativeDatabaseSync === 'function') { window.onNativeDatabaseSync('" + safeJson + "'); }", null);
+                    webView.evaluateJavascript(jsCode, null);
                 });
             } catch (Exception e) {
                 Log.e("HqQrUtils", "Failed to sync native database to web: " + e.getMessage());
@@ -425,9 +425,10 @@ public class MainActivity extends AppCompatActivity {
                     scanId = java.util.UUID.randomUUID().toString();
                 }
                 if (scanResult != null && !scanResult.isEmpty()) {
-                    String safeResult = scanResult.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n");
                     String finalScanId = scanId;
-                    webView.post(() -> webView.evaluateJavascript("if(window.onNativeScanSuccess) window.onNativeScanSuccess('" + safeResult + "', " + scanCreatedAt + ", '" + finalScanId + "');", null));
+                    String jsCode = String.format("if(window.onNativeScanSuccess) window.onNativeScanSuccess(%s, %d, %s);",
+                            JSONObject.quote(scanResult), scanCreatedAt, JSONObject.quote(finalScanId));
+                    webView.post(() -> webView.evaluateJavascript(jsCode, null));
                 }
             }
         }

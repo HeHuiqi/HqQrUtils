@@ -18,6 +18,7 @@
     let currentCategoryFilter = 'all';
     let lastNativeScanTime = 0;
     let lastNativeScanResult = '';
+    let isInitialNativeSync = true;
 
     // DOM Cache
     const DOM = {
@@ -358,9 +359,18 @@
         DOM.copyTextBtn.disabled = !enabled;
     }
 
-    // --- 生成全局唯一记录 ID (统一 UUID 格式, 避免不同来源记录 ID 冲突) ---
+    // --- 生成全局唯一记录 ID (全端统一 RFC4122 v4 标准 UUID 格式) ---
     function generateRecordId() {
-        return 'qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            try {
+                return crypto.randomUUID();
+            } catch (e) {}
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0;
+            var v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
     // 暴露到 window，供 native-bridge.js 兜底路径使用，保证全端 ID 格式一致
@@ -977,17 +987,32 @@
             console.log('📱 [Web Native Sync] 收到原生数据库同步更新, 原生记录数:', nativeRecords.length);
 
             // 1. 如果原生数据库为空：
-            // 若 Web 端有本地历史记录，说明原生数据库可能为初次启动或数据重置，自动将 Web 端已有记录反向同步至原生 SQLite，防止误清数据
             if (nativeRecords.length === 0) {
-                if (historyRecords.length > 0 && window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
-                    historyRecords.forEach(function (rec) {
-                        try {
-                            window.AndroidNative.syncWebRecordToNative(JSON.stringify(rec));
-                        } catch (e) {}
-                    });
+                if (isInitialNativeSync) {
+                    isInitialNativeSync = false;
+                    // 首次启动冷迁移：若 Web 端已有本地历史记录，自动反向推送到原生 SQLite
+                    if (historyRecords.length > 0 && window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
+                        historyRecords.forEach(function (rec) {
+                            try {
+                                window.AndroidNative.syncWebRecordToNative(JSON.stringify(rec));
+                            } catch (e) {}
+                        });
+                    }
+                } else {
+                    // 非首次冷启动（如用户在原生 ScanHistoryActivity 中点击清空全部），同步清空 Web 端
+                    if (historyRecords.length > 0) {
+                        historyRecords = [];
+                        activeRecordId = null;
+                        if (DOM.activeRecordTag) DOM.activeRecordTag.textContent = '新建生成';
+                        StorageManager.saveHistory(historyRecords);
+                        refreshHistoryUI();
+                    }
                 }
                 return;
             }
+
+            // 收到有效原生记录，标记初次同步已完成
+            isInitialNativeSync = false;
 
             // 2. 基于统一的 UUID 构建原生记录 Map
             const nativeMap = new Map();
