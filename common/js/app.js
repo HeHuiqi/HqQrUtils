@@ -16,6 +16,7 @@
     let isCameraActive = false;
     let currentCategoryFilter = 'all';
     let lastNativeScanTime = 0;
+    let lastNativeScanResult = '';
 
     // DOM Cache
     const DOM = {
@@ -421,12 +422,11 @@
         StorageManager.saveHistory(historyRecords);
 
         // 如果运行在 Android App 容器中，同步从原生 SQLite 数据库中删除该记录
-        // 原生端 insert 可能尚在后台线程写入，首次删除可能找不到记录，延迟重试一次
+        // 原生端按 timeMillis 精确匹配，未命中时降级按 content 删除对应记录
+        // （不做 JS 侧盲目重试：重试无法获知首次是否成功，反而可能触发原生按
+        //   content 兜底删除而误删其它相同内容的历史记录）
         if (targetRecord && targetRecord.content && window.AndroidNative && window.AndroidNative.deleteWebRecordFromNative) {
             window.AndroidNative.deleteWebRecordFromNative(targetRecord.content, targetRecord.createdAt || 0);
-            setTimeout(function () {
-                window.AndroidNative.deleteWebRecordFromNative(targetRecord.content, targetRecord.createdAt || 0);
-            }, 500);
         }
 
         if (activeRecordId === id) {
@@ -863,10 +863,14 @@
     window.onNativeScanSuccess = function (resultText, timeMillis) {
         if (!resultText) return;
 
-        // 防抖：快速连续多次回调（如用户双击扫码）只处理首次
+        // 防抖：同一扫码结果可能被多次回调（如同一次扫码的重复 onActivityResult），
+        // 只有"内容相同且短时间内接连到来"的回调才忽略；
+        // 快速连扫的两条不同结果（内容不同）仍会正常处理，不会静默丢数据。
         var now = Date.now();
-        if (now - lastNativeScanTime < 500) return;
+        var isDuplicate = (now - lastNativeScanTime < 500) && (lastNativeScanResult === resultText);
         lastNativeScanTime = now;
+        lastNativeScanResult = resultText;
+        if (isDuplicate) return;
 
         console.log('📱 [Web Native Callback] 收到原生扫码识别结果:', resultText);
 
