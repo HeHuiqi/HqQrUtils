@@ -35,14 +35,16 @@ class ScanResultActivity : AppCompatActivity() {
         binding.textViewResult.text = content
 
         // 扫码或识别成功后，自动将结果写入本地数据库历史记录
-        // recordTime 同时作为结果回传给 MainActivity，保证 Web 端记录与原生库使用同一时间戳，
-        // 以便 Web 端删除记录时能按时间戳精确匹配，避免相同内容的多条记录被误删
+        // recordId / recordTime 同时作为结果回传给 MainActivity，保证 Web 端记录与原生库使用统一 UUID 主键与时间戳
+        val recordId = java.util.UUID.randomUUID().toString()
         val recordTime = System.currentTimeMillis()
-        saveRecordToHistory(content, format, recordTime)
+        saveRecordToHistory(recordId, content, format, recordTime)
 
         // 设置原生返回结果，传递给 MainActivity / WebBridge
         setResult(RESULT_OK, Intent()
+            .putExtra("scan_id", recordId)
             .putExtra("scan_result", content)
+            .putExtra("scan_created_at", recordTime)
             .putExtra("scan_time_millis", recordTime))
         
         setupListeners()
@@ -66,16 +68,17 @@ class ScanResultActivity : AppCompatActivity() {
     /**
      * 自动写入扫码历史记录
      */
-    private fun saveRecordToHistory(content: String, format: String, recordTime: Long) {
+    private fun saveRecordToHistory(id: String, content: String, format: String, recordTime: Long) {
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 ScanDatabase.getInstance(this@ScanResultActivity)
                     .scanRecordDao()
                     .insert(
                         ScanRecord(
+                            id = id,
                             content = content,
                             type = format,
-                            timeMillis = recordTime
+                            createdAt = recordTime
                         )
                     )
             }

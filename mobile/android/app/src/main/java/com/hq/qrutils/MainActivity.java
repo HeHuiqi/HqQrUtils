@@ -150,7 +150,12 @@ public class MainActivity extends AppCompatActivity {
                     obj.put("title", r.getTitle());
                     obj.put("category", r.getCategory());
                     obj.put("isFavorite", r.isFavorite());
-                    obj.put("timeMillis", r.getTimeMillis());
+                    obj.put("createdAt", r.getCreatedAt());
+                    obj.put("fgColor", r.getFgColor() != null ? r.getFgColor() : "#0f172a");
+                    obj.put("bgColor", r.getBgColor() != null ? r.getBgColor() : "#ffffff");
+                    obj.put("ecl", r.getEcl() != null ? r.getEcl() : "M");
+                    obj.put("cellSize", r.getCellSize() != null ? r.getCellSize() : 8);
+                    obj.put("margin", r.getMargin() != null ? r.getMargin() : 4);
                     jsonArray.put(obj);
                 }
                 String jsonStr = jsonArray.toString();
@@ -242,29 +247,89 @@ public class MainActivity extends AppCompatActivity {
             startActivityForResult(intent, SCAN_ACTIVITY_REQUEST_CODE);
         }
 
+        /**
+         * 接收 Web 端完整 Record JSON 格式数据并同步写入 SQLite (包含 UUID 与样式字段)
+         */
         @JavascriptInterface
-        public void syncWebRecordToNative(String content, String title, String category, long timeMillis) {
-            if (content == null || content.isEmpty()) return;
-            // 提交到串行队列，确保该记录插入完成后再执行后续可能的删除
+        public void syncWebRecordToNative(String recordJson) {
+            if (recordJson == null || recordJson.isEmpty()) return;
             dbExecutor.execute(() -> {
-                ScanDatabase.getInstance(MainActivity.this).scanRecordDao().insertSync(
-                        new ScanRecord(0, content, "QR_CODE", title != null ? title : "", category != null ? category : "none", false, timeMillis)
-                );
+                try {
+                    JSONObject obj = new JSONObject(recordJson);
+                    String id = obj.optString("id", java.util.UUID.randomUUID().toString());
+                    String content = obj.optString("content", "");
+                    if (content.isEmpty()) return;
+                    String type = obj.optString("type", "QR_CODE");
+                    String title = obj.optString("title", "");
+                    String category = obj.optString("category", "none");
+                    boolean isFavorite = obj.optBoolean("isFavorite", false);
+                    long createdAt = obj.optLong("createdAt", System.currentTimeMillis());
+                    String fgColor = obj.optString("fgColor", "#0f172a");
+                    String bgColor = obj.optString("bgColor", "#ffffff");
+                    String ecl = obj.optString("ecl", "M");
+                    int cellSize = obj.optInt("cellSize", 8);
+                    int margin = obj.optInt("margin", 4);
+
+                    ScanRecord record = new ScanRecord(
+                            id, content, type, title, category, isFavorite, createdAt, fgColor, bgColor, ecl, cellSize, margin
+                    );
+                    ScanDatabase.getInstance(MainActivity.this).scanRecordDao().insertSync(record);
+                } catch (Exception e) {
+                    Log.e("HqQrUtils", "Failed to parse and sync web record: " + e.getMessage());
+                }
             });
         }
 
+        /**
+         * 兼容旧版参数签名的重载方法
+         */
         @JavascriptInterface
-        public void deleteWebRecordFromNative(String content, long timeMillis) {
+        public void syncWebRecordToNative(String content, String title, String category, long timeMillis) {
             if (content == null || content.isEmpty()) return;
-            // 与插入在同一串行队列，保证「先插入后删除」的顺序，
-            // 避免删除先于插入执行导致按 timeMillis 查不到而残留
+            dbExecutor.execute(() -> {
+                ScanRecord record = new ScanRecord(
+                        java.util.UUID.randomUUID().toString(),
+                        content, "QR_CODE",
+                        title != null ? title : "",
+                        category != null ? category : "none",
+                        false, timeMillis,
+                        "#0f172a", "#ffffff", "M", 8, 4
+                );
+                ScanDatabase.getInstance(MainActivity.this).scanRecordDao().insertSync(record);
+            });
+        }
+
+        /**
+         * 根据统一的 UUID 主键从原生 SQLite 数据库中精确删除记录
+         */
+        @JavascriptInterface
+        public void deleteWebRecordFromNative(String id) {
+            if (id == null || id.isEmpty()) return;
             dbExecutor.execute(() -> {
                 ScanRecordDao dao = ScanDatabase.getInstance(MainActivity.this).scanRecordDao();
-                // 按 timeMillis 精确匹配 (Web 生成记录的 createdAt 与 Native 同步时的 timeMillis 一致)
-                int deleted = dao.deleteByTimeMillis(timeMillis);
+                int deleted = dao.deleteById(id);
                 if (deleted == 0) {
-                    Log.w("HqQrUtils", "deleteByTimeMillis miss, timeMillis=" + timeMillis + " content=" + content);
+                    Log.w("HqQrUtils", "deleteById miss, id=" + id);
                 }
+            });
+        }
+
+        /**
+         * 兼容旧版参数签名的重载方法
+         */
+        @JavascriptInterface
+        public void deleteWebRecordFromNative(String content, long timeMillis) {
+            Log.w("HqQrUtils", "Legacy deleteWebRecordFromNative called with content=" + content);
+        }
+
+        /**
+         * 同步星标收藏状态至原生 SQLite 数据库
+         */
+        @JavascriptInterface
+        public void toggleFavoriteNative(String id, boolean isFavorite) {
+            if (id == null || id.isEmpty()) return;
+            dbExecutor.execute(() -> {
+                ScanDatabase.getInstance(MainActivity.this).scanRecordDao().updateFavorite(id, isFavorite);
             });
         }
 
@@ -327,10 +392,15 @@ public class MainActivity extends AppCompatActivity {
         } else if (requestCode == SCAN_ACTIVITY_REQUEST_CODE) {
             if (resultCode == RESULT_OK && data != null) {
                 String scanResult = data.getStringExtra("scan_result");
-                long scanTimeMillis = data.getLongExtra("scan_time_millis", 0L);
+                String scanId = data.getStringExtra("scan_id");
+                long scanCreatedAt = data.getLongExtra("scan_created_at", data.getLongExtra("scan_time_millis", System.currentTimeMillis()));
+                if (scanId == null || scanId.isEmpty()) {
+                    scanId = java.util.UUID.randomUUID().toString();
+                }
                 if (scanResult != null && !scanResult.isEmpty()) {
-                    String safeResult = scanResult.replace("'", "\\'").replace("\n", "\\n");
-                    webView.post(() -> webView.evaluateJavascript("if(window.onNativeScanSuccess) window.onNativeScanSuccess('" + safeResult + "', " + scanTimeMillis + ");", null));
+                    String safeResult = scanResult.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n");
+                    String finalScanId = scanId;
+                    webView.post(() -> webView.evaluateJavascript("if(window.onNativeScanSuccess) window.onNativeScanSuccess('" + safeResult + "', " + scanCreatedAt + ", '" + finalScanId + "');", null));
                 }
             }
         }

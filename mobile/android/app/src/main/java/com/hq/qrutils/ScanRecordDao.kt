@@ -9,20 +9,27 @@ import androidx.room.Query
 @Dao
 interface ScanRecordDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(record: ScanRecord): Long
+    suspend fun insert(record: ScanRecord)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertSync(record: ScanRecord): Long
+    fun insertSync(record: ScanRecord)
 
-    @Query("SELECT * FROM scan_records ORDER BY isFavorite DESC, timeMillis DESC")
+    @Query("SELECT * FROM scan_records ORDER BY isFavorite DESC, createdAt DESC")
     suspend fun getAllRecords(): List<ScanRecord>
 
-    @Query("SELECT * FROM scan_records ORDER BY isFavorite DESC, timeMillis DESC")
+    @Query("SELECT * FROM scan_records ORDER BY isFavorite DESC, createdAt DESC")
     fun getAllRecordsSync(): List<ScanRecord>
 
-    /** 根据 timeMillis 删除 (Web 端记录的 createdAt 与 Native 同步时作为关联键) */
-    @Query("DELETE FROM scan_records WHERE timeMillis = :timeMillis")
-    fun deleteByTimeMillis(timeMillis: Long): Int
+    /** 根据统一的 UUID 主键删除记录 */
+    @Query("DELETE FROM scan_records WHERE id = :id")
+    fun deleteById(id: String): Int
+
+    @Query("DELETE FROM scan_records WHERE id = :id")
+    suspend fun deleteByIdAsync(id: String): Int
+
+    /** 更新单条记录的星标收藏状态 */
+    @Query("UPDATE scan_records SET isFavorite = :isFavorite WHERE id = :id")
+    fun updateFavorite(id: String, isFavorite: Boolean): Int
 
     @Query("DELETE FROM scan_records WHERE content = :content")
     fun deleteByContentSync(content: String)

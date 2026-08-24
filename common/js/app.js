@@ -324,9 +324,9 @@
         DOM.copyTextBtn.disabled = !enabled;
     }
 
-    // --- 生成全局唯一记录 ID (统一格式, 避免不同来源记录 ID 冲突) ---
+    // --- 生成全局唯一记录 ID (统一 UUID 格式, 避免不同来源记录 ID 冲突) ---
     function generateRecordId() {
-        return 'qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        return 'qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     }
 
     // 暴露到 window，供 native-bridge.js 兜底路径使用，保证全端 ID 格式一致
@@ -346,20 +346,20 @@
             content: options.content,
             category: options.category || 'none',
             isFavorite: false,
-            fgColor: options.fgColor,
-            bgColor: options.bgColor,
-            ecl: options.logoImage ? 'H' : options.ecl,
-            cellSize: options.cellSize,
-            margin: options.margin,
+            fgColor: options.fgColor || '#0f172a',
+            bgColor: options.bgColor || '#ffffff',
+            ecl: options.logoImage ? 'H' : (options.ecl || 'M'),
+            cellSize: options.cellSize || 8,
+            margin: typeof options.margin !== 'undefined' ? options.margin : 4,
             createdAt: now
         };
 
         historyRecords.unshift(newRecord);
         StorageManager.saveHistory(historyRecords);
 
-        // 如果处于 Android App 内，同步将 Web 端生成的历史记录保存到原生 SQLite 数据库
+        // 如果处于 Android App 内，同步将 Web 端生成的历史记录保存到原生 SQLite 数据库 (完整 JSON 同步)
         if (window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
-            window.AndroidNative.syncWebRecordToNative(options.content, displayTitle, options.category || 'none', now);
+            window.AndroidNative.syncWebRecordToNative(JSON.stringify(newRecord));
         }
 
         return newRecord;
@@ -387,6 +387,10 @@
         if (item) {
             item.isFavorite = !item.isFavorite;
             StorageManager.saveHistory(historyRecords);
+            // 同步星标状态至 Android 原生数据库
+            if (window.AndroidNative && window.AndroidNative.toggleFavoriteNative) {
+                window.AndroidNative.toggleFavoriteNative(id, item.isFavorite);
+            }
             refreshHistoryUI();
             ToastManager.show(item.isFavorite ? '已加入星标收藏并置顶' : '已取消星标收藏', 'info');
         }
@@ -421,17 +425,12 @@
     }
 
     function deleteRecord(id) {
-        const targetRecord = historyRecords.find(item => item.id === id);
-
         historyRecords = historyRecords.filter(item => item.id !== id);
         StorageManager.saveHistory(historyRecords);
 
-        // 如果运行在 Android App 容器中，同步从原生 SQLite 数据库中删除该记录
-        // 原生端按 timeMillis 精确匹配，未命中时降级按 content 删除对应记录
-        // （不做 JS 侧盲目重试：重试无法获知首次是否成功，反而可能触发原生按
-        //   content 兜底删除而误删其它相同内容的历史记录）
-        if (targetRecord && targetRecord.content && window.AndroidNative && window.AndroidNative.deleteWebRecordFromNative) {
-            window.AndroidNative.deleteWebRecordFromNative(targetRecord.content, targetRecord.createdAt || 0);
+        // 如果运行在 Android App 容器中，直接按统一 UUID 主键同步从原生 SQLite 数据库精确删除
+        if (window.AndroidNative && window.AndroidNative.deleteWebRecordFromNative) {
+            window.AndroidNative.deleteWebRecordFromNative(id);
         }
 
         if (activeRecordId === id) {
@@ -848,12 +847,31 @@
                     }
                     let count = 0;
                     imported.forEach(item => {
-                        if (item.content && !historyRecords.some(r => r.id === item.id)) {
-                            historyRecords.push(item);
-                            count++;
+                        if (item && typeof item.content === 'string' && item.content.trim()) {
+                            const validId = (typeof item.id === 'string' && item.id.trim()) ? item.id.trim() : generateRecordId();
+                            if (!historyRecords.some(r => r.id === validId)) {
+                                const validRecord = {
+                                    id: validId,
+                                    title: (typeof item.title === 'string' && item.title.trim()) ? item.title.trim() : (item.content.length > 20 ? item.content.substring(0, 20) + '...' : item.content),
+                                    content: item.content.trim(),
+                                    category: (typeof item.category === 'string') ? item.category : 'none',
+                                    isFavorite: !!item.isFavorite,
+                                    createdAt: (typeof item.createdAt === 'number' && !isNaN(item.createdAt)) ? item.createdAt : (typeof item.timeMillis === 'number' ? item.timeMillis : Date.now()),
+                                    fgColor: item.fgColor || '#0f172a',
+                                    bgColor: item.bgColor || '#ffffff',
+                                    ecl: item.ecl || 'M',
+                                    cellSize: (typeof item.cellSize === 'number' && item.cellSize > 0) ? item.cellSize : 8,
+                                    margin: (typeof item.margin === 'number' && item.margin >= 0) ? item.margin : 4
+                                };
+                                historyRecords.push(validRecord);
+                                if (window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
+                                    window.AndroidNative.syncWebRecordToNative(JSON.stringify(validRecord));
+                                }
+                                count++;
+                            }
                         }
                     });
-                    historyRecords.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    historyRecords.sort((a, b) => (b.isFavorite - a.isFavorite) || ((b.createdAt || 0) - (a.createdAt || 0)));
                     StorageManager.saveHistory(historyRecords);
                     refreshHistoryUI();
                     ToastManager.show(`成功导入 ${count} 条历史记录`, 'success');
@@ -864,8 +882,8 @@
     }
 
     // 暴露给 Android 原生 ScanActivity / MainActivity 调用的扫码成功回调
-    // 第二个参数 timeMillis 为原生扫码时刻 (与原生 SQLite 库中记录的时间戳一致, 用于删除时精确匹配)
-    window.onNativeScanSuccess = function (resultText, timeMillis) {
+    // 参数：resultText(扫码内容), createdAt(生成时间戳), scanId(原生生成的统一 UUID)
+    window.onNativeScanSuccess = function (resultText, createdAt, scanId) {
         if (!resultText) return;
 
         // 防抖：同一扫码结果可能被多次回调（如同一次扫码的重复 onActivityResult），
@@ -877,26 +895,37 @@
         lastNativeScanResult = resultText;
         if (isDuplicate) return;
 
-        console.log('📱 [Web Native Callback] 收到原生扫码识别结果:', resultText);
+        console.log('📱 [Web Native Callback] 收到原生扫码识别结果:', resultText, scanId);
 
+        const recordId = (typeof scanId === 'string' && scanId.trim()) ? scanId.trim() : generateRecordId();
         const newRecord = {
-            id: generateRecordId(),
+            id: recordId,
             title: '原生扫码识别',
             content: resultText,
             category: 'none',
             isFavorite: false,
-            createdAt: timeMillis || Date.now()
+            createdAt: createdAt || Date.now(),
+            fgColor: '#0f172a',
+            bgColor: '#ffffff',
+            ecl: 'M',
+            cellSize: 8,
+            margin: 4
         };
 
-        historyRecords.unshift(newRecord);
+        const existingIndex = historyRecords.findIndex(r => r.id === recordId);
+        if (existingIndex >= 0) {
+            historyRecords[existingIndex] = newRecord;
+        } else {
+            historyRecords.unshift(newRecord);
+        }
         StorageManager.saveHistory(historyRecords);
         refreshHistoryUI();
 
-        // 自动切到识别标签页并回显识别结果
+        // 自动切到识别标签页并回显识别结果 (统一为 flex 布局)
         switchMode('decode');
         if (DOM.decodeResultText && DOM.decodeResultCard) {
             DOM.decodeResultText.value = resultText;
-            DOM.decodeResultCard.style.display = 'block';
+            DOM.decodeResultCard.style.display = 'flex';
         }
 
         if (window.ToastManager) {
@@ -925,52 +954,73 @@
                 return;
             }
 
-            // 2. 建立原生记录的时间戳 Set
-            var nativeTimeSet = new Set();
+            // 2. 基于统一的 UUID 构建原生记录 Map
+            const nativeMap = new Map();
             nativeRecords.forEach(function (r) {
-                if (r.timeMillis) {
-                    nativeTimeSet.add(r.timeMillis);
+                if (r && r.id) {
+                    nativeMap.set(r.id, r);
                 }
             });
 
-            // 3. 移除 Web 端已被原生端删除的记录 (以 createdAt / timeMillis 为主键关联)
+            // 3. 过滤 Web 端已被原生删除的记录，并同步原生最新字段状态（如收藏状态），同时保留 Web 端已有样式
             var changed = false;
-            var newWebRecords = historyRecords.filter(function (webRec) {
-                if (webRec.createdAt && !nativeTimeSet.has(webRec.createdAt)) {
+            var mergedRecords = [];
+
+            historyRecords.forEach(function (webRec) {
+                if (nativeMap.has(webRec.id)) {
+                    const natRec = nativeMap.get(webRec.id);
+                    const updated = {
+                        ...webRec,
+                        title: natRec.title || webRec.title,
+                        content: natRec.content || webRec.content,
+                        category: natRec.category || webRec.category || 'none',
+                        isFavorite: typeof natRec.isFavorite !== 'undefined' ? !!natRec.isFavorite : !!webRec.isFavorite,
+                        createdAt: natRec.createdAt || webRec.createdAt || Date.now(),
+                        fgColor: webRec.fgColor || natRec.fgColor || '#0f172a',
+                        bgColor: webRec.bgColor || natRec.bgColor || '#ffffff',
+                        ecl: webRec.ecl || natRec.ecl || 'M',
+                        cellSize: webRec.cellSize || natRec.cellSize || 8,
+                        margin: typeof webRec.margin !== 'undefined' ? webRec.margin : (typeof natRec.margin !== 'undefined' ? natRec.margin : 4)
+                    };
+                    mergedRecords.push(updated);
+                } else {
                     changed = true;
                     if (activeRecordId === webRec.id) {
                         activeRecordId = null;
                         if (DOM.activeRecordTag) DOM.activeRecordTag.textContent = '新建生成';
                     }
-                    return false; // 原生已删除该条记录
                 }
-                return true;
             });
 
-            // 4. 同步原生端新增的记录 (如原生离线扫码识别的记录)
-            var webTimeSet = new Set(newWebRecords.map(function (r) { return r.createdAt; }).filter(Boolean));
+            // 4. 补充原生端新增的记录 (如 ScanActivity 离线扫码识别直接写入 SQLite 的记录)
+            var existingIds = new Set(mergedRecords.map(function (r) { return r.id; }));
             nativeRecords.forEach(function (natRec) {
-                if (natRec.timeMillis && !webTimeSet.has(natRec.timeMillis)) {
+                if (natRec && natRec.id && !existingIds.has(natRec.id)) {
                     changed = true;
-                    newWebRecords.push({
-                        id: generateRecordId(),
+                    mergedRecords.push({
+                        id: natRec.id,
                         title: natRec.title || '原生扫码识别',
                         content: natRec.content,
                         category: natRec.category || 'none',
                         isFavorite: !!natRec.isFavorite,
-                        createdAt: natRec.timeMillis
+                        createdAt: natRec.createdAt || Date.now(),
+                        fgColor: natRec.fgColor || '#0f172a',
+                        bgColor: natRec.bgColor || '#ffffff',
+                        ecl: natRec.ecl || 'M',
+                        cellSize: natRec.cellSize || 8,
+                        margin: typeof natRec.margin !== 'undefined' ? natRec.margin : 4
                     });
                 }
             });
 
-            if (changed || newWebRecords.length !== historyRecords.length) {
-                newWebRecords.sort(function (a, b) {
+            if (changed || mergedRecords.length !== historyRecords.length) {
+                mergedRecords.sort(function (a, b) {
                     var favA = a.isFavorite ? 1 : 0;
                     var favB = b.isFavorite ? 1 : 0;
                     if (favA !== favB) return favB - favA;
                     return (b.createdAt || 0) - (a.createdAt || 0);
                 });
-                historyRecords = newWebRecords;
+                historyRecords = mergedRecords;
                 StorageManager.saveHistory(historyRecords);
                 refreshHistoryUI();
             }

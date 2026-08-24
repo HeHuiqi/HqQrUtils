@@ -3,16 +3,23 @@ package com.hq.qrutils
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+import java.util.UUID
+
 @Entity(tableName = "scan_records")
 data class ScanRecord(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    @PrimaryKey
+    val id: String = UUID.randomUUID().toString(),
     val content: String,
-    val type: String,
+    val type: String = "QR_CODE",
     val title: String = "",
     val category: String = "none",
     val isFavorite: Boolean = false,
-    val timeMillis: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val fgColor: String? = "#0f172a",
+    val bgColor: String? = "#ffffff",
+    val ecl: String? = "M",
+    val cellSize: Int? = 8,
+    val margin: Int? = 4
 ) {
     companion object {
         fun formatLabel(type: String): String {

@@ -53,21 +53,23 @@
          */
         bindNativeScanCallback() {
             const originalCallback = window.onNativeScanSuccess;
-            window.onNativeScanSuccess = function (resultText, timeMillis) {
+            window.onNativeScanSuccess = function (resultText, createdAt, scanId) {
                 if (!resultText) return;
-                console.log('📱 [Native Scan Callback] 收到原生扫码识别结果:', resultText);
+                console.log('📱 [Native Scan Callback] 收到原生扫码识别结果:', resultText, scanId);
 
                 // 1. 优先调用 app.js 中已挂载的存储与历史列表刷新方法
                 if (typeof originalCallback === 'function') {
-                    originalCallback(resultText, timeMillis);
+                    originalCallback(resultText, createdAt, scanId);
                     return;
                 }
 
                 // 2. 兜底策略：如果 app.js 中尚未挂载，手动写入 StorageManager 存储
-                // ID 统一使用 app.js 暴露的 generateRecordId，保证全端格式一致
-                var recordId = (typeof window.generateRecordId === 'function')
-                    ? window.generateRecordId()
-                    : ('qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
+                // ID 统一使用传入的 scanId 或 generateRecordId
+                var recordId = (typeof scanId === 'string' && scanId.trim())
+                    ? scanId.trim()
+                    : ((typeof window.generateRecordId === 'function')
+                        ? window.generateRecordId()
+                        : ('qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)));
 
                 if (window.StorageManager && window.StorageManager.loadHistory) {
                     window.StorageManager.loadHistory(function (records) {
@@ -78,9 +80,19 @@
                             content: resultText,
                             category: 'none',
                             isFavorite: false,
-                            createdAt: timeMillis || Date.now()
+                            createdAt: createdAt || Date.now(),
+                            fgColor: '#0f172a',
+                            bgColor: '#ffffff',
+                            ecl: 'M',
+                            cellSize: 8,
+                            margin: 4
                         };
-                        historyRecords.unshift(newRecord);
+                        const existingIndex = historyRecords.findIndex(r => r.id === recordId);
+                        if (existingIndex >= 0) {
+                            historyRecords[existingIndex] = newRecord;
+                        } else {
+                            historyRecords.unshift(newRecord);
+                        }
                         window.StorageManager.saveHistory(historyRecords);
                     });
                 }
@@ -93,7 +105,7 @@
                 const decodeResultCard = document.getElementById('decodeResultCard');
                 if (decodeResultText && decodeResultCard) {
                     decodeResultText.value = resultText;
-                    decodeResultCard.style.display = 'block';
+                    decodeResultCard.style.display = 'flex';
                 }
 
                 if (window.ToastManager) {

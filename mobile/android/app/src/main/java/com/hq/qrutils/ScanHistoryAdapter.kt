@@ -38,7 +38,7 @@ class ScanHistoryAdapter(
             binding.textViewHistoryType.text = ScanRecord.formatLabel(record.type)
             
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-            binding.textViewHistoryTime.text = dateFormat.format(Date(record.timeMillis))
+            binding.textViewHistoryTime.text = dateFormat.format(Date(record.createdAt))
 
             binding.root.setOnClickListener { onItemClick(record) }
             binding.root.setOnLongClickListener {
