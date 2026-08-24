@@ -126,11 +126,16 @@
 
             const meta = document.createElement('div');
             meta.className = 'history-meta';
-            meta.innerHTML = `
-                <span>${HistoryUIManager.formatTime(record.createdAt)}</span>
-                <span>·</span>
-                <span>容错 ${record.ecl || 'M'}</span>
-            `;
+            const timeSpan = document.createElement('span');
+            timeSpan.textContent = HistoryUIManager.formatTime(record.createdAt);
+            const dotSpan = document.createElement('span');
+            dotSpan.textContent = '·';
+            const eclSpan = document.createElement('span');
+            const safeEcl = ['L', 'M', 'Q', 'H'].includes((record.ecl || '').toUpperCase()) ? (record.ecl || '').toUpperCase() : 'M';
+            eclSpan.textContent = `容错 ${safeEcl}`;
+            meta.appendChild(timeSpan);
+            meta.appendChild(dotSpan);
+            meta.appendChild(eclSpan);
 
             details.appendChild(title);
             details.appendChild(snippet);
@@ -140,8 +145,8 @@
             const rightWrapper = document.createElement('div');
             rightWrapper.className = 'history-right-wrapper';
 
-            // 检查文本是否包含 :// 协议（如 http://, https://, voghion://, intent:// 等），在右上角渲染 <a> 超链接
-            if (record.content && (record.content.includes('://') || /^https?:\/\//i.test(record.content.trim()))) {
+            // 检查文本是否为安全的协议链接（支持 http/https 及 voghion://, alipays://, weixin://, intent:// 等自定义 App Scheme，严格拦截 javascript:/data:/file: 等危险伪协议）
+            if (HistoryUIManager.isSafeSchemeUrl(record.content)) {
                 const openLink = document.createElement('a');
                 openLink.className = 'history-open-btn-top';
                 openLink.href = record.content.trim();
@@ -241,6 +246,22 @@
             const hours = String(d.getHours()).padStart(2, '0');
             const minutes = String(d.getMinutes()).padStart(2, '0');
             return `${month}-${day} ${hours}:${minutes}`;
+        },
+
+        /**
+         * 校验文本是否为安全的协议 URL (支持 http/https 及合法的自定义 App Scheme，严格拦截可执行与危险伪协议)
+         */
+        isSafeSchemeUrl(content) {
+            if (!content || typeof content !== 'string') return false;
+            const trimmed = content.trim();
+            if (!trimmed.includes('://')) return false;
+
+            // 严格拦截可执行、本地敏感或浏览器内部伪协议
+            const dangerousPattern = /^(javascript|data|vbscript|file|about|blob|chrome|resource):/i;
+            if (dangerousPattern.test(trimmed)) return false;
+
+            // 必须以合法 Scheme 语法开头：[a-zA-Z][a-zA-Z0-9+.-]*://
+            return /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed);
         }
     };
 

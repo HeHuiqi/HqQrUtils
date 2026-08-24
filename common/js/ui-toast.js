@@ -13,11 +13,14 @@
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
 
-            let iconHtml = 'ℹ️';
-            if (type === 'success') iconHtml = '✅';
-            if (type === 'error') iconHtml = '⚠️';
+            const iconSpan = document.createElement('span');
+            iconSpan.textContent = iconHtml;
+            const msgSpan = document.createElement('span');
+            msgSpan.textContent = message;
 
-            toast.innerHTML = `<span>${iconHtml}</span> <span>${message}</span>`;
+            toast.appendChild(iconSpan);
+            toast.appendChild(document.createTextNode(' '));
+            toast.appendChild(msgSpan);
             container.appendChild(toast);
 
             setTimeout(() => {

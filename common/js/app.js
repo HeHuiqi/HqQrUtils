@@ -976,14 +976,15 @@
 
             console.log('📱 [Web Native Sync] 收到原生数据库同步更新, 原生记录数:', nativeRecords.length);
 
-            // 1. 如果原生数据库为空，则清空 Web 端所有历史记录
+            // 1. 如果原生数据库为空：
+            // 若 Web 端有本地历史记录，说明原生数据库可能为初次启动或数据重置，自动将 Web 端已有记录反向同步至原生 SQLite，防止误清数据
             if (nativeRecords.length === 0) {
-                if (historyRecords.length > 0) {
-                    historyRecords = [];
-                    activeRecordId = null;
-                    if (DOM.activeRecordTag) DOM.activeRecordTag.textContent = '新建生成';
-                    StorageManager.saveHistory(historyRecords);
-                    refreshHistoryUI();
+                if (historyRecords.length > 0 && window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
+                    historyRecords.forEach(function (rec) {
+                        try {
+                            window.AndroidNative.syncWebRecordToNative(JSON.stringify(rec));
+                        } catch (e) {}
+                    });
                 }
                 return;
             }

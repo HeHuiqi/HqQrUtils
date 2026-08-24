@@ -6,6 +6,18 @@
 (function (window) {
     'use strict';
 
+    let cachedBarcodeDetector = null;
+    function getBarcodeDetector() {
+        if (!cachedBarcodeDetector && 'BarcodeDetector' in window) {
+            try {
+                cachedBarcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+            } catch (e) {
+                cachedBarcodeDetector = null;
+            }
+        }
+        return cachedBarcodeDetector;
+    }
+
     const QREngine = {
         /**
          * 生成 Canvas 画布格式的二维码（支持中心嵌入 Logo）
@@ -86,10 +98,10 @@
          * @returns {Promise<string>} 解码出的字符串内容
          */
         async decodeImage(imageElement) {
-            // 1. 优先尝试浏览器原生 BarcodeDetector API (系统硬件级)
-            if ('BarcodeDetector' in window) {
+            // 1. 优先尝试浏览器原生 BarcodeDetector API (系统硬件级，复用单例)
+            const detector = getBarcodeDetector();
+            if (detector) {
                 try {
-                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
                     const results = await detector.detect(imageElement);
                     if (results && results.length > 0 && results[0].rawValue) {
                         return results[0].rawValue;
@@ -108,7 +120,7 @@
                 const MAX_SAFE_DIM = 2000;
                 const naturalMax = Math.max(srcWidth, srcHeight);
                 const safeMax = Math.min(naturalMax, MAX_SAFE_DIM);
-                const targetSizes = naturalMax > 800 ? [800, safeMax] : [naturalMax];
+                const targetSizes = (naturalMax > 800 && safeMax !== 800) ? [800, safeMax] : [safeMax];
 
                 for (const maxDim of targetSizes) {
                     let width = srcWidth;
@@ -156,10 +168,10 @@
             const videoHeight = videoElement.videoHeight;
             if (!videoWidth || !videoHeight) return null;
 
-            // 1. 优先尝试原生 BarcodeDetector
-            if ('BarcodeDetector' in window) {
+            // 1. 优先尝试原生 BarcodeDetector (复用单例)
+            const detector = getBarcodeDetector();
+            if (detector) {
                 try {
-                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
                     const results = await detector.detect(videoElement);
                     if (results && results.length > 0 && results[0].rawValue) {
                         return results[0].rawValue;

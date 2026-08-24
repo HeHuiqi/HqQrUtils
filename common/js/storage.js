@@ -111,7 +111,9 @@
                 document.body.appendChild(downloadAnchor);
                 downloadAnchor.click();
                 document.body.removeChild(downloadAnchor);
-                URL.revokeObjectURL(url);
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 1000);
                 return true;
             } catch (e) {
                 console.error('Failed to export JSON:', e);

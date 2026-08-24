@@ -60,12 +60,12 @@ public class MainActivity extends AppCompatActivity {
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            settings.setAllowFileAccessFromFileURLs(true);
-            settings.setAllowUniversalAccessFromFileURLs(true);
+            settings.setAllowFileAccessFromFileURLs(false);
+            settings.setAllowUniversalAccessFromFileURLs(false);
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         }
 
         // 注册 Android 原生 JS 桥接对象 AndroidNative
@@ -89,6 +89,13 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
+                // 安全校验：仅允许本地 asset 或 localhost 域请求摄像头等系统敏感权限
+                String origin = request.getOrigin() != null ? request.getOrigin().toString() : "";
+                if (!origin.startsWith("file://") && !origin.startsWith("http://localhost") && !origin.startsWith("https://localhost")) {
+                    request.deny();
+                    return;
+                }
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
                             != PackageManager.PERMISSION_GRANTED) {
@@ -176,12 +183,26 @@ public class MainActivity extends AppCompatActivity {
     private boolean handleCustomSchemeOrIntent(WebView view, String url) {
         if (url == null) return false;
 
-        // 如果是标准的网页或基础协议，交由 WebView 内部加载处理
-        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file://") || url.startsWith("javascript:")) {
+        // 1. 显式拦截危险可执行伪协议 (javascript:, data:, vbscript:, about:, blob:)
+        String lowerUrl = url.trim().toLowerCase();
+        if (lowerUrl.startsWith("javascript:") || lowerUrl.startsWith("data:") ||
+                lowerUrl.startsWith("vbscript:") || lowerUrl.startsWith("about:") || lowerUrl.startsWith("blob:")) {
+            Log.w("HqQrUtils", "Blocked dangerous URL scheme attempt: " + url);
+            return true; // 拦截阻止，防止在当前 WebView file:// 上下文中执行脚本
+        }
+
+        // 2. 如果是标准的网页或合法本地 asset 基础协议，交由 WebView 内部加载处理
+        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file:///android_asset/")) {
             return false;
         }
 
-        // 1. 处理 intent:// 语法 URL (Android Chrome Intent URI)
+        // 拦截其他非 asset 的本地 file:// 协议，防止任意文件读取
+        if (url.startsWith("file://")) {
+            Log.w("HqQrUtils", "Blocked external file URL: " + url);
+            return true;
+        }
+
+        // 3. 处理 intent:// 语法 URL (Android Chrome Intent URI)
         if (url.startsWith("intent://")) {
             try {
                 Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
@@ -194,10 +215,16 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     // 如果未安装目标 App，优先检查是否存在 S.browser_fallback_url 参数跳转 Fallback 网页
+                    // 安全校验：browser_fallback_url 严格仅允许 http:// 或 https:// 协议，防止注入 javascript:
                     String fallbackUrl = intent.getStringExtra("browser_fallback_url");
                     if (fallbackUrl != null && !fallbackUrl.isEmpty()) {
-                        view.loadUrl(fallbackUrl);
-                        return true;
+                        String lowerFallback = fallbackUrl.trim().toLowerCase();
+                        if (lowerFallback.startsWith("http://") || lowerFallback.startsWith("https://")) {
+                            view.loadUrl(fallbackUrl);
+                            return true;
+                        } else {
+                            Log.w("HqQrUtils", "Ignored unsafe fallbackUrl: " + fallbackUrl);
+                        }
                     }
 
                     // 尝试通过 Package 包名调起应用商店
@@ -220,7 +247,7 @@ public class MainActivity extends AppCompatActivity {
             return true; // 已原生截获处理，防止 WebView 报错 net::ERR_UNKNOWN_URL_SCHEME
         }
 
-        // 2. 处理其他 Custom Scheme 协议 (如 voghion://, alipays://, weixin://, myapp://)
+        // 4. 处理其他 Custom Scheme 协议 (如 voghion://, alipays://, weixin://, myapp://)
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
