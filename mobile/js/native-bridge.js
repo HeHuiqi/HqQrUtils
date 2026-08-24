@@ -27,6 +27,11 @@
                 console.log('📱 [Android Native Bridge] 运行于 Android 原生 APP 容器内');
 
                 this.bindNativeScanCallback();
+
+                // 初始化时主动请求与原生 SQLite 数据库同步一次历史记录 (拉取最新增删状态)
+                if (window.AndroidNative && window.AndroidNative.requestHistorySync) {
+                    window.AndroidNative.requestHistorySync();
+                }
             } else {
                 console.log('🌐 [Android Native Bridge] 当前处于 Web / 浏览器调试环境');
             }

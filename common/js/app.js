@@ -107,6 +107,11 @@
         StorageManager.loadHistory((records) => {
             historyRecords = records || [];
             refreshHistoryUI();
+
+            // 如果在 Android 原生环境内，主动请求与原生 SQLite 数据库做一次校验同步
+            if (window.AndroidNative && window.AndroidNative.requestHistorySync) {
+                window.AndroidNative.requestHistorySync();
+            }
         });
 
         // 检查右键菜单 URL 参数
@@ -896,6 +901,81 @@
 
         if (window.ToastManager) {
             ToastManager.show('原生扫码识别成功，已自动保存至历史记录！', 'success');
+        }
+    };
+
+    // 暴露给 Android 原生调用的全量历史数据同步回调 (当原生端删除/清空记录或 Activity onResume 时触发)
+    window.onNativeDatabaseSync = function (nativeRecordsJson) {
+        if (!nativeRecordsJson) return;
+        try {
+            var nativeRecords = typeof nativeRecordsJson === 'string' ? JSON.parse(nativeRecordsJson) : nativeRecordsJson;
+            if (!Array.isArray(nativeRecords)) return;
+
+            console.log('📱 [Web Native Sync] 收到原生数据库同步更新, 原生记录数:', nativeRecords.length);
+
+            // 1. 如果原生数据库为空，则清空 Web 端所有历史记录
+            if (nativeRecords.length === 0) {
+                if (historyRecords.length > 0) {
+                    historyRecords = [];
+                    activeRecordId = null;
+                    if (DOM.activeRecordTag) DOM.activeRecordTag.textContent = '新建生成';
+                    StorageManager.saveHistory(historyRecords);
+                    refreshHistoryUI();
+                }
+                return;
+            }
+
+            // 2. 建立原生记录的时间戳 Set
+            var nativeTimeSet = new Set();
+            nativeRecords.forEach(function (r) {
+                if (r.timeMillis) {
+                    nativeTimeSet.add(r.timeMillis);
+                }
+            });
+
+            // 3. 移除 Web 端已被原生端删除的记录 (以 createdAt / timeMillis 为主键关联)
+            var changed = false;
+            var newWebRecords = historyRecords.filter(function (webRec) {
+                if (webRec.createdAt && !nativeTimeSet.has(webRec.createdAt)) {
+                    changed = true;
+                    if (activeRecordId === webRec.id) {
+                        activeRecordId = null;
+                        if (DOM.activeRecordTag) DOM.activeRecordTag.textContent = '新建生成';
+                    }
+                    return false; // 原生已删除该条记录
+                }
+                return true;
+            });
+
+            // 4. 同步原生端新增的记录 (如原生离线扫码识别的记录)
+            var webTimeSet = new Set(newWebRecords.map(function (r) { return r.createdAt; }).filter(Boolean));
+            nativeRecords.forEach(function (natRec) {
+                if (natRec.timeMillis && !webTimeSet.has(natRec.timeMillis)) {
+                    changed = true;
+                    newWebRecords.push({
+                        id: generateRecordId(),
+                        title: natRec.title || '原生扫码识别',
+                        content: natRec.content,
+                        category: natRec.category || 'none',
+                        isFavorite: !!natRec.isFavorite,
+                        createdAt: natRec.timeMillis
+                    });
+                }
+            });
+
+            if (changed || newWebRecords.length !== historyRecords.length) {
+                newWebRecords.sort(function (a, b) {
+                    var favA = a.isFavorite ? 1 : 0;
+                    var favB = b.isFavorite ? 1 : 0;
+                    if (favA !== favB) return favB - favA;
+                    return (b.createdAt || 0) - (a.createdAt || 0);
+                });
+                historyRecords = newWebRecords;
+                StorageManager.saveHistory(historyRecords);
+                refreshHistoryUI();
+            }
+        } catch (e) {
+            console.error('Failed to parse onNativeDatabaseSync JSON:', e);
         }
     };
 

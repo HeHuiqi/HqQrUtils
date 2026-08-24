@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -23,7 +24,12 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.net.URISyntaxException;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,6 +40,10 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private PermissionRequest pendingPermissionRequest;
     private ValueCallback<Uri[]> filePathCallback;
+
+    // Web 与原生数据库的同步任务统一提交到单线程串行队列，
+    // 保证「插入」先于「删除」执行，避免并发竞态导致原生记录残留
+    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,6 +123,45 @@ public class MainActivity extends AppCompatActivity {
 
         // 加载 Web 主应用入口
         webView.loadUrl("file:///android_asset/public/index.html");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 当从原生扫码 (ScanActivity) 或原生历史页面 (ScanHistoryActivity) 返回时，
+        // 自动将原生数据库的最新记录全量同步给 Web 端，使 Web 界面及时感知原生端的删除/清空变动
+        syncNativeDatabaseToWeb();
+    }
+
+    /**
+     * 将原生数据库 (ScanDatabase) 中的最新记录全量同步至 Web 端 WebView
+     */
+    public void syncNativeDatabaseToWeb() {
+        if (webView == null) return;
+        dbExecutor.execute(() -> {
+            try {
+                List<ScanRecord> records = ScanDatabase.getInstance(MainActivity.this).scanRecordDao().getAllRecordsSync();
+                JSONArray jsonArray = new JSONArray();
+                for (ScanRecord r : records) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("id", r.getId());
+                    obj.put("content", r.getContent());
+                    obj.put("type", r.getType());
+                    obj.put("title", r.getTitle());
+                    obj.put("category", r.getCategory());
+                    obj.put("isFavorite", r.isFavorite());
+                    obj.put("timeMillis", r.getTimeMillis());
+                    jsonArray.put(obj);
+                }
+                String jsonStr = jsonArray.toString();
+                String safeJson = jsonStr.replace("\\", "\\\\").replace("'", "\\'");
+                webView.post(() -> {
+                    webView.evaluateJavascript("if (typeof window.onNativeDatabaseSync === 'function') { window.onNativeDatabaseSync('" + safeJson + "'); }", null);
+                });
+            } catch (Exception e) {
+                Log.e("HqQrUtils", "Failed to sync native database to web: " + e.getMessage());
+            }
+        });
     }
 
     /**
@@ -196,33 +245,39 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void syncWebRecordToNative(String content, String title, String category, long timeMillis) {
             if (content == null || content.isEmpty()) return;
-            new Thread(() -> {
+            // 提交到串行队列，确保该记录插入完成后再执行后续可能的删除
+            dbExecutor.execute(() -> {
                 ScanDatabase.getInstance(MainActivity.this).scanRecordDao().insertSync(
                         new ScanRecord(0, content, "QR_CODE", title != null ? title : "", category != null ? category : "none", false, timeMillis)
                 );
-            }).start();
+            });
         }
 
         @JavascriptInterface
         public void deleteWebRecordFromNative(String content, long timeMillis) {
             if (content == null || content.isEmpty()) return;
-            new Thread(() -> {
+            // 与插入在同一串行队列，保证「先插入后删除」的顺序，
+            // 避免删除先于插入执行导致按 timeMillis 查不到而残留
+            dbExecutor.execute(() -> {
                 ScanRecordDao dao = ScanDatabase.getInstance(MainActivity.this).scanRecordDao();
-                // 优先按 timeMillis 精确匹配 (Web 生成记录的 createdAt 与 Native 同步时的 timeMillis 一致)
+                // 按 timeMillis 精确匹配 (Web 生成记录的 createdAt 与 Native 同步时的 timeMillis 一致)
                 int deleted = dao.deleteByTimeMillis(timeMillis);
                 if (deleted == 0) {
-                    // timeMillis 未匹配到 (如 Native 扫码结果回传 Web 时 createdAt ≠ native timeMillis),
-                    // 降级按 content 匹配删除
-                    dao.deleteByContentSync(content);
+                    Log.w("HqQrUtils", "deleteByTimeMillis miss, timeMillis=" + timeMillis + " content=" + content);
                 }
-            }).start();
+            });
         }
 
         @JavascriptInterface
         public void clearAllNativeRecords() {
-            new Thread(() -> {
+            dbExecutor.execute(() -> {
                 ScanDatabase.getInstance(MainActivity.this).scanRecordDao().clearAllSync();
-            }).start();
+            });
+        }
+
+        @JavascriptInterface
+        public void requestHistorySync() {
+            syncNativeDatabaseToWeb();
         }
 
         @JavascriptInterface
@@ -303,5 +358,12 @@ public class MainActivity extends AppCompatActivity {
         } else {
             super.onBackPressed();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 关闭串行队列，释放后台线程，避免 Activity 销毁后线程泄漏
+        dbExecutor.shutdown();
     }
 }
