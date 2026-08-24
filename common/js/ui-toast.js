@@ -13,8 +13,9 @@
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
 
+            const typeIcons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
             const iconSpan = document.createElement('span');
-            iconSpan.textContent = iconHtml;
+            iconSpan.textContent = typeIcons[type] || 'ℹ️';
             const msgSpan = document.createElement('span');
             msgSpan.textContent = message;
 
