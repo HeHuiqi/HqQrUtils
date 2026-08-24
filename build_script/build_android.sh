@@ -35,9 +35,25 @@ cp "$ROOT_DIR/mobile/js/native-bridge.js" "$ASSETS_DIR/js/native-bridge.js"
 # 5. 在 index.html 中自动注入移动端适配 CSS 与 Android Native Bridge
 if [ -f "$ASSETS_DIR/index.html" ]; then
     echo "📱 正在注入移动端适配 CSS 与 Native Bridge 到 Android index.html..."
-    sed -i.bak 's|</head>|    <link rel="stylesheet" href="css/mobile-layout.css">\n</head>|g' "$ASSETS_DIR/index.html"
-    sed -i.bak 's|</body>|    <script src="js/native-bridge.js"></script>\n</body>|g' "$ASSETS_DIR/index.html"
-    rm -f "$ASSETS_DIR/index.html.bak"
+
+    # 检查是否已注入过，防止重复运行导致重复注入
+    if grep -q 'native-bridge.js' "$ASSETS_DIR/index.html"; then
+        echo "⚠️  native-bridge.js 已存在，跳过重复注入"
+    else
+        sed -i.bak 's|</head>|    <link rel="stylesheet" href="css/mobile-layout.css">\n</head>|g' "$ASSETS_DIR/index.html"
+        sed -i.bak 's|</body>|    <script src="js/native-bridge.js"></script>\n</body>|g' "$ASSETS_DIR/index.html"
+        rm -f "$ASSETS_DIR/index.html.bak"
+    fi
+
+    # 断言：注入后必须包含 native-bridge.js 引用，否则构建失败
+    if ! grep -q 'native-bridge.js' "$ASSETS_DIR/index.html"; then
+        echo "❌ 注入失败：index.html 中未找到 native-bridge.js"
+        exit 1
+    fi
+    if ! grep -q 'mobile-layout.css' "$ASSETS_DIR/index.html"; then
+        echo "❌ 注入失败：index.html 中未找到 mobile-layout.css"
+        exit 1
+    fi
 fi
 
 # 6. 同步至根 build/android 方便构建查看

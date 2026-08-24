@@ -59,11 +59,16 @@
                 }
 
                 // 2. 兜底策略：如果 app.js 中尚未挂载，手动写入 StorageManager 存储
+                // ID 统一使用 app.js 暴露的 generateRecordId，保证全端格式一致
+                var recordId = (typeof window.generateRecordId === 'function')
+                    ? window.generateRecordId()
+                    : ('qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
+
                 if (window.StorageManager && window.StorageManager.loadHistory) {
                     window.StorageManager.loadHistory(function (records) {
                         const historyRecords = records || [];
                         const newRecord = {
-                            id: 'qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                            id: recordId,
                             title: '原生扫码识别',
                             content: resultText,
                             category: 'none',

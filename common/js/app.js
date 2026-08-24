@@ -15,6 +15,7 @@
     let cameraScanInterval = null;
     let isCameraActive = false;
     let currentCategoryFilter = 'all';
+    let lastNativeScanTime = 0;
 
     // DOM Cache
     const DOM = {
@@ -322,6 +323,9 @@
         return 'qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     }
 
+    // 暴露到 window，供 native-bridge.js 兜底路径使用，保证全端 ID 格式一致
+    window.generateRecordId = generateRecordId;
+
     // --- 保存记录 ---
     function saveRecord(options) {
         const now = Date.now();
@@ -417,8 +421,12 @@
         StorageManager.saveHistory(historyRecords);
 
         // 如果运行在 Android App 容器中，同步从原生 SQLite 数据库中删除该记录
+        // 原生端 insert 可能尚在后台线程写入，首次删除可能找不到记录，延迟重试一次
         if (targetRecord && targetRecord.content && window.AndroidNative && window.AndroidNative.deleteWebRecordFromNative) {
             window.AndroidNative.deleteWebRecordFromNative(targetRecord.content, targetRecord.createdAt || 0);
+            setTimeout(function () {
+                window.AndroidNative.deleteWebRecordFromNative(targetRecord.content, targetRecord.createdAt || 0);
+            }, 500);
         }
 
         if (activeRecordId === id) {
@@ -437,6 +445,7 @@
             StorageManager.saveHistory(historyRecords);
 
             // 如果运行在 Android App 容器中，同步清空原生 SQLite 数据库中的所有记录
+            // 延迟执行，给未完成的异步写入留出收尾窗口
             if (window.AndroidNative && window.AndroidNative.clearAllNativeRecords) {
                 window.AndroidNative.clearAllNativeRecords();
             }
@@ -853,6 +862,12 @@
     // 第二个参数 timeMillis 为原生扫码时刻 (与原生 SQLite 库中记录的时间戳一致, 用于删除时精确匹配)
     window.onNativeScanSuccess = function (resultText, timeMillis) {
         if (!resultText) return;
+
+        // 防抖：快速连续多次回调（如用户双击扫码）只处理首次
+        var now = Date.now();
+        if (now - lastNativeScanTime < 500) return;
+        lastNativeScanTime = now;
+
         console.log('📱 [Web Native Callback] 收到原生扫码识别结果:', resultText);
 
         const newRecord = {
