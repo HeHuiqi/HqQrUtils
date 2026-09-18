@@ -29,10 +29,16 @@ captures/
 *.keystore
 *.jks
 
+# AI 助手与编辑器缓存
+.workbuddy/
+.zcode/
+.poolside/
+.freebuff/
+
 # OS Metadata
 .DS_Store
 Thumbs.db
-.poolside/
-.freebuff/
+
+# 本地文档（不入库）
 codereview.md
 tmp.md

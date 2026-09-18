@@ -10,10 +10,10 @@
 
 ```text
 HqQrUtils/
-├── common/                  # 核心通用层 (跨平台 100% 复用，包含 css, js, lib)
+├── common/                  # 核心通用层（CSS、算法库、NativeHost 与应用控制器）
 ├── web/                     # Web App 网页部署端源码
 ├── chrome_ext/              # Chrome 浏览器扩展端源码 (Manifest V3)
-├── mobile/                  # 移动端 Android 原生 App 工程 (WebView + Kotlin 原生扫码)
+├── mobile/                  # 移动端原生工程（当前 Android；iOS Host 待后续阶段实现）
 ├── build_script/            # 🛠️ 自动化多端构建打包脚本目录
 │   ├── build_web.sh        # 打包构建 Web 网页产物
 │   └── build_chrome_ext.sh # 打包构建 Chrome 扩展产物

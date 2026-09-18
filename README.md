@@ -55,14 +55,14 @@
 HqQrUtils/
 ├── common/                  # 🌐 跨平台核心公共代码 (CSS/JS 库与解码引擎)
 │   ├── css/                 # 全局设计 Token 与组件样式 (variables/base/header/panels/preview/history/toast)
-│   └── js/                  # QREngine 引擎, StorageManager 存储, ToastManager 提示, HistoryUIManager 历史, app 主控
+│   └── js/                  # QREngine、StorageManager、ToastManager、HistoryUIManager、NativeHost 与 app 主控
 ├── web/                     # 💻 Web 独立运行包源码
 ├── chrome_ext/              # 🧩 Chrome 扩展程序源码 (Manifest V3)
 │   ├── background.js        # Background Service Worker
 │   └── icons/               # 品牌扩展图标 (16x16, 48x48, 128x128)
 ├── mobile/                  # 📱 移动端原生工程与 Bridge 适配器
 │   ├── mobile-layout.css    # 移动端安全区与 Touch 样式
-│   ├── js/native-bridge.js  # Android Native 桥接适配器
+│   ├── js/native-bridge.js  # Android NativeHost 适配器
 │   └── android/             # Android Kotlin 原生 Gradle 工程
 │       ├── app/src/main/java/com/hq/qrutils/
 │       │   ├── MainActivity.java        # WebView 主入口容器 + 原生 JS 桥接 (AndroidNative)

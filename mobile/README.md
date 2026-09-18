@@ -1,16 +1,16 @@
 # 📱 HQ 二维码工具箱 - 移动端 (Android App) 构建说明
 
-本文档介绍如何在 `mobile/` 目录下进行 Android 原生 App 移植与功能扩展。
+本文档介绍当前 Android 原生 App 的构建与扩展方式。共享 Web 层通过 `NativeHost` 对接平台能力；iOS 原生 Host 将在后续阶段以同一契约接入。
 
 ---
 
 ## 📱 1. Android 原生功能与特性支持 (Android Features)
 
-1. **触觉反馈 (Haptic Feedback)**：
-   - 每次点击生成二维码、切换模式或成功识别二维码时，通过 `AndroidBridge.vibrate()` 触发 Android 原生触觉震动反馈。
-2. **原生 Toast 提示与剪贴板 (Native Toast & Clipboard)**：
-   - 适配 Android 原生 `Toast` 消息提示浮层。
-   - 快捷复制操作优先调用原生 `ClipboardManager` API。
+1. **统一原生宿主桥接 (NativeHost)**：
+   - 共享 Web 应用仅通过 `NativeHost` 调用扫码、历史同步、收藏、删除、清空、触觉与提示能力。
+   - `mobile/js/native-bridge.js` 将该契约映射到 Android WebView 的 `AndroidNative` 接口，为后续 iOS Host 预留同一组命令与事件。
+2. **原生扫码与历史同步**：
+   - CameraX、ML Kit 和 Room 负责原生扫码与历史持久化；扫码结果及数据库快照通过 NativeHost 回写共享 Web UI。
 3. **物理返回键监听 (Hardware Back Button)**：
    - 自动监听 Android 手机底部的物理/手势返回键。
    - 优先关闭相机会话视口，若位于首页双击返回键提示 `再按一次退出 HQ 二维码工具箱`。

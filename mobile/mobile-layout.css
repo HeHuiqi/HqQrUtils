@@ -10,7 +10,8 @@
     padding-bottom: max(4.5rem, calc(var(--safe-area-bottom) + 3.5rem));
 }
 
-/* 安卓原生 App 专属隐藏规则：原生 ScanActivity 已包含相册识别，因此隐藏 H5 重复的点击/拖拽上传模块 */
+/* 原生 App 隐藏规则：原生扫码页已包含相册识别，因此隐藏 H5 重复的点击/拖拽上传模块。 */
+.is-native-app .drop-zone,
 .is-android-app .drop-zone {
     display: none !important;
 }

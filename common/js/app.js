@@ -110,10 +110,10 @@
             historyRecords = records || [];
             refreshHistoryUI();
 
-            // 如果在 Android 原生环境内，主动请求与原生 SQLite 数据库做一次校验同步
-            if (window.AndroidNative && window.AndroidNative.requestHistorySync) {
-                window.AndroidNative.requestHistorySync();
-            }
+            // 本地历史准备完成后再接收原生事件，避免早到快照覆盖未加载的本地数据。
+            NativeHost.onScanSuccess(handleNativeScanSuccess);
+            NativeHost.onDatabaseSync(handleNativeDatabaseSync);
+            NativeHost.requestHistorySync();
         });
 
         // 检查右键菜单 URL 参数
@@ -158,12 +158,8 @@
             return;
         }
 
-        // 1. 优先检查是否存在 Android 原生 JS 桥接对象 (直接拉起原生 CameraX & ML Kit ScanActivity)
-        if (window.AndroidNative && window.AndroidNative.scanQRCode) {
-            window.AndroidNative.scanQRCode();
-            return;
-        }
-        if (window.AndroidBridge && window.AndroidBridge.startNativeScan && window.AndroidBridge.startNativeScan()) {
+        // 原生宿主接管扫码时直接拉起平台扫码页；Web/Chrome 则继续使用浏览器摄像头回退。
+        if (NativeHost.startScan()) {
             return;
         }
 
@@ -400,10 +396,8 @@
         historyRecords.unshift(newRecord);
         StorageManager.saveHistory(historyRecords);
 
-        // 如果处于 Android App 内，同步将 Web 端生成的历史记录保存到原生 SQLite 数据库 (完整 JSON 同步)
-        if (window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
-            window.AndroidNative.syncWebRecordToNative(JSON.stringify(newRecord));
-        }
+        // 同步将 Web 端生成的完整记录交给原生宿主持久化。
+        NativeHost.upsertRecord(newRecord);
 
         return newRecord;
     }
@@ -430,10 +424,8 @@
         if (item) {
             item.isFavorite = !item.isFavorite;
             StorageManager.saveHistory(historyRecords);
-            // 同步星标状态至 Android 原生数据库
-            if (window.AndroidNative && window.AndroidNative.toggleFavoriteNative) {
-                window.AndroidNative.toggleFavoriteNative(id, item.isFavorite);
-            }
+            // 同步星标状态至原生宿主数据库。
+            NativeHost.setFavorite(id, item.isFavorite);
             refreshHistoryUI();
             ToastManager.show(item.isFavorite ? '已加入星标收藏并置顶' : '已取消星标收藏', 'info');
         }
@@ -471,10 +463,8 @@
         historyRecords = historyRecords.filter(item => item.id !== id);
         StorageManager.saveHistory(historyRecords);
 
-        // 如果运行在 Android App 容器中，直接按统一 UUID 主键同步从原生 SQLite 数据库精确删除
-        if (window.AndroidNative && window.AndroidNative.deleteWebRecordFromNative) {
-            window.AndroidNative.deleteWebRecordFromNative(id);
-        }
+        // 按统一 UUID 主键同步从原生宿主数据库精确删除。
+        NativeHost.deleteRecord(id);
 
         if (activeRecordId === id) {
             activeRecordId = null;
@@ -491,11 +481,8 @@
             activeRecordId = null;
             StorageManager.saveHistory(historyRecords);
 
-            // 如果运行在 Android App 容器中，同步清空原生 SQLite 数据库中的所有记录
-            // 延迟执行，给未完成的异步写入留出收尾窗口
-            if (window.AndroidNative && window.AndroidNative.clearAllNativeRecords) {
-                window.AndroidNative.clearAllNativeRecords();
-            }
+            // 同步清空原生宿主数据库中的所有记录。
+            NativeHost.clearRecords();
 
             refreshHistoryUI();
             DOM.activeRecordTag.textContent = '新建生成';
@@ -907,9 +894,7 @@
                                     margin: (typeof item.margin === 'number' && item.margin >= 0) ? item.margin : 4
                                 };
                                 historyRecords.push(validRecord);
-                                if (window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
-                                    window.AndroidNative.syncWebRecordToNative(JSON.stringify(validRecord));
-                                }
+                                NativeHost.upsertRecord(validRecord);
                                 count++;
                             }
                         }
@@ -924,9 +909,9 @@
         });
     }
 
-    // 暴露给 Android 原生 ScanActivity / MainActivity 调用的扫码成功回调
+    // 原生宿主扫码成功事件处理器。
     // 参数：resultText(扫码内容), createdAt(生成时间戳), scanId(原生生成的统一 UUID)
-    window.onNativeScanSuccess = function (resultText, createdAt, scanId) {
+    function handleNativeScanSuccess(resultText, createdAt, scanId) {
         if (!resultText) return;
 
         // 防抖：同一扫码结果可能被多次回调（如同一次扫码的重复 onActivityResult），
@@ -972,10 +957,10 @@
         if (window.ToastManager) {
             ToastManager.show('原生扫码识别成功，已自动保存至历史记录！', 'success');
         }
-    };
+    }
 
-    // 暴露给 Android 原生调用的全量历史数据同步回调 (当原生端删除/清空记录或 Activity onResume 时触发)
-    window.onNativeDatabaseSync = function (nativeRecordsJson) {
+    // 原生宿主的全量历史同步事件处理器（原生端删除、清空记录或恢复前台时触发）。
+    function handleNativeDatabaseSync(nativeRecordsJson) {
         if (!nativeRecordsJson) return;
         try {
             var nativeRecords = typeof nativeRecordsJson === 'string' ? JSON.parse(nativeRecordsJson) : nativeRecordsJson;
@@ -985,12 +970,10 @@
             if (nativeRecords.length === 0) {
                 if (isInitialNativeSync) {
                     isInitialNativeSync = false;
-                    // 首次启动冷迁移：若 Web 端已有本地历史记录，自动反向推送到原生 SQLite
-                    if (historyRecords.length > 0 && window.AndroidNative && window.AndroidNative.syncWebRecordToNative) {
+                    // 首次启动冷迁移：若 Web 端已有本地历史记录，自动反向推送到原生宿主。
+                    if (historyRecords.length > 0) {
                         historyRecords.forEach(function (rec) {
-                            try {
-                                window.AndroidNative.syncWebRecordToNative(JSON.stringify(rec));
-                            } catch (e) {}
+                            NativeHost.upsertRecord(rec);
                         });
                     }
                 } else {
@@ -1080,9 +1063,9 @@
                 refreshHistoryUI();
             }
         } catch (e) {
-            console.error('Failed to parse onNativeDatabaseSync JSON:', e);
+            console.error('Failed to process native database sync JSON:', e);
         }
-    };
+    }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
