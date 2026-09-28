@@ -26,6 +26,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -260,18 +261,21 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * JS 桥接接口类 (暴露给 H5 / native-bridge.js 调用)
+     * 使用静态内部类 + WeakReference 避免内存泄漏
      */
-    public class WebAppInterface {
-        Context mContext;
+    public static class WebAppInterface {
+        private final WeakReference<MainActivity> activityRef;
 
-        WebAppInterface(Context c) {
-            mContext = c;
+        WebAppInterface(MainActivity activity) {
+            activityRef = new WeakReference<>(activity);
         }
 
         @JavascriptInterface
         public void scanQRCode() {
-            Intent intent = new Intent(MainActivity.this, ScanActivity.class);
-            startActivityForResult(intent, SCAN_ACTIVITY_REQUEST_CODE);
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            Intent intent = new Intent(activity, ScanActivity.class);
+            activity.startActivityForResult(intent, SCAN_ACTIVITY_REQUEST_CODE);
         }
 
         /**
@@ -280,7 +284,9 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void syncWebRecordToNative(String recordJson) {
             if (recordJson == null || recordJson.isEmpty()) return;
-            dbExecutor.execute(() -> {
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            activity.dbExecutor.execute(() -> {
                 try {
                     JSONObject obj = new JSONObject(recordJson);
                     String id = obj.optString("id", java.util.UUID.randomUUID().toString());
@@ -300,7 +306,7 @@ public class MainActivity extends AppCompatActivity {
                     ScanRecord record = new ScanRecord(
                             id, content, type, title, category, isFavorite, createdAt, fgColor, bgColor, ecl, cellSize, margin
                     );
-                    ScanDatabase.getInstance(MainActivity.this).scanRecordDao().insertSync(record);
+                    ScanDatabase.getInstance(activity).scanRecordDao().insertSync(record);
                 } catch (Exception e) {
                     Log.e("HqQrUtils", "Failed to parse and sync web record: " + e.getMessage());
                 }
@@ -313,7 +319,9 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void syncWebRecordToNative(String content, String title, String category, long timeMillis) {
             if (content == null || content.isEmpty()) return;
-            dbExecutor.execute(() -> {
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            activity.dbExecutor.execute(() -> {
                 ScanRecord record = new ScanRecord(
                         java.util.UUID.randomUUID().toString(),
                         content, "QR_CODE",
@@ -322,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
                         false, timeMillis,
                         "#0f172a", "#ffffff", "M", 8, 4
                 );
-                ScanDatabase.getInstance(MainActivity.this).scanRecordDao().insertSync(record);
+                ScanDatabase.getInstance(activity).scanRecordDao().insertSync(record);
             });
         }
 
@@ -332,8 +340,10 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void deleteWebRecordFromNative(String id) {
             if (id == null || id.isEmpty()) return;
-            dbExecutor.execute(() -> {
-                ScanRecordDao dao = ScanDatabase.getInstance(MainActivity.this).scanRecordDao();
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            activity.dbExecutor.execute(() -> {
+                ScanRecordDao dao = ScanDatabase.getInstance(activity).scanRecordDao();
                 int deleted = dao.deleteById(id);
                 if (deleted == 0) {
                     Log.w("HqQrUtils", "deleteById miss, id=" + id);
@@ -355,32 +365,48 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void toggleFavoriteNative(String id, boolean isFavorite) {
             if (id == null || id.isEmpty()) return;
-            dbExecutor.execute(() -> {
-                ScanDatabase.getInstance(MainActivity.this).scanRecordDao().updateFavorite(id, isFavorite);
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            activity.dbExecutor.execute(() -> {
+                ScanDatabase.getInstance(activity).scanRecordDao().updateFavorite(id, isFavorite);
             });
         }
 
+        /**
+         * 清空原生 SQLite 数据库中的所有记录
+         */
         @JavascriptInterface
         public void clearAllNativeRecords() {
-            dbExecutor.execute(() -> {
-                ScanDatabase.getInstance(MainActivity.this).scanRecordDao().clearAllSync();
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            activity.dbExecutor.execute(() -> {
+                ScanDatabase.getInstance(activity).scanRecordDao().clearAllSync();
             });
         }
 
+        /**
+         * 触发原生数据库全量同步到 Web 页面
+         */
         @JavascriptInterface
         public void requestHistorySync() {
-            syncNativeDatabaseToWeb();
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            activity.syncNativeDatabaseToWeb();
         }
 
         @JavascriptInterface
         public void vibrate() {
-            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            Vibrator v = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
             if (v != null) v.vibrate(40);
         }
 
         @JavascriptInterface
         public void showToast(String message) {
-            Toast.makeText(mContext, message, Toast.LENGTH_SHORT).show();
+            MainActivity activity = activityRef.get();
+            if (activity == null) return;
+            Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
         }
     }
 

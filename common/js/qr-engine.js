@@ -113,8 +113,14 @@
 
             // 2. jsQR 深度识别 (多尺度降采样，解决手机相册 12MP+ 高清大图解算卡顿与识别失败问题)
             if (typeof jsQR !== 'undefined') {
+                // 统一获取图像固有尺寸
+                // HTMLImageElement 擅长 naturalWidth/naturalHeight (固有像素)
+                // HTMLCanvasElement 仅有 width/height (位图尺寸)
                 const srcWidth = imageElement.naturalWidth || imageElement.width || 300;
                 const srcHeight = imageElement.naturalHeight || imageElement.height || 300;
+                if (!srcWidth || !srcHeight) {
+                    throw new Error('无法获取图像有效尺寸');
+                }
 
                 // 多尺度算法：优先使用 800px 最佳解码尺寸，随后回退至原图或安全上限尺寸 (最高 2000px，防止 4K+ 原图 OOM)
                 const MAX_SAFE_DIM = 2000;
@@ -166,7 +172,7 @@
 
             const videoWidth = videoElement.videoWidth;
             const videoHeight = videoElement.videoHeight;
-            if (!videoWidth || !videoHeight) return null;
+            if (!videoWidth || !videoHeight || videoWidth <= 0 || videoHeight <= 0) return null;
 
             // 1. 优先尝试原生 BarcodeDetector (复用单例)
             const detector = getBarcodeDetector();

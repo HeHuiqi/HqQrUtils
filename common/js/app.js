@@ -1073,4 +1073,21 @@
         init();
     }
 
+    // --- 全局错误处理 (Global Error Handler) ---
+    // 捕获同步异常、异步 Promise 拒绝，避免静默失败
+    window.addEventListener('error', function (event) {
+        if (window.ToastManager) {
+            ToastManager.show('应用发生错误，请刷新页面重试', 'error');
+        }
+        console.error('[Global Error]', event.error || event.message);
+    });
+
+    window.addEventListener('unhandledrejection', function (event) {
+        if (event && event.reason) {
+            console.error('[Unhandled Rejection]', event.reason);
+        }
+        // 防止控制台抛出未捕获的 rejection 警告
+        event.preventDefault();
+    });
+
 })(window);
