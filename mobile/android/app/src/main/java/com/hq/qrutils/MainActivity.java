@@ -127,6 +127,29 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(Intent.createChooser(intent, "选择二维码图片"), FILE_CHOOSER_REQUEST_CODE);
                 return true;
             }
+
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("提示")
+                        .setMessage(message)
+                        .setPositiveButton("确定", (dialog, which) -> result.confirm())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("确认操作")
+                        .setMessage(message)
+                        .setPositiveButton("确定", (dialog, which) -> result.confirm())
+                        .setNegativeButton("取消", (dialog, which) -> result.cancel())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
         });
 
         // 加载 Web 主应用入口
@@ -407,6 +430,63 @@ public class MainActivity extends AppCompatActivity {
             MainActivity activity = activityRef.get();
             if (activity == null) return;
             Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
+        }
+
+        /**
+         * 保存 Base64 图片到系统相册 (MediaStore)
+         */
+        @JavascriptInterface
+        public boolean saveImageToGallery(String dataUrl, String filename) {
+            if (dataUrl == null || dataUrl.isEmpty()) return false;
+            MainActivity activity = activityRef.get();
+            if (activity == null) return false;
+
+            activity.runOnUiThread(() -> {
+                try {
+                    String base64Data = dataUrl;
+                    if (dataUrl.contains(",")) {
+                        base64Data = dataUrl.substring(dataUrl.indexOf(",") + 1);
+                    }
+                    byte[] decodedBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT);
+                    android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+                    if (bitmap == null) {
+                        Toast.makeText(activity, "图片解码失败", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    String name = (filename != null && !filename.isEmpty()) ? filename : ("qrcode_" + System.currentTimeMillis() + ".png");
+                    if (!name.endsWith(".png")) name += ".png";
+
+                    android.content.ContentValues values = new android.content.ContentValues();
+                    values.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name);
+                    values.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png");
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        values.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/HqQrUtils");
+                        values.put(android.provider.MediaStore.Images.Media.IS_PENDING, 1);
+                    }
+
+                    android.net.Uri uri = activity.getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                    if (uri != null) {
+                        try (java.io.OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
+                            if (out != null) {
+                                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+                            }
+                        }
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            values.clear();
+                            values.put(android.provider.MediaStore.Images.Media.IS_PENDING, 0);
+                            activity.getContentResolver().update(uri, values, null, null);
+                        }
+                        Toast.makeText(activity, "已成功保存到系统相册", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(activity, "保存到相册失败", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Exception e) {
+                    Log.e("HqQrUtils", "Failed to save image to gallery: " + e.getMessage());
+                    Toast.makeText(activity, "保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+            return true;
         }
     }
 

@@ -8,11 +8,20 @@ build_android/
 mobile/android/build/
 mobile/android/app/build/
 mobile/android/app/src/main/assets/public/
+mobile/ios/build/
+mobile/ios/HqQrUtils.xcworkspace
+mobile/ios/Pods/
+mobile/ios/DerivedData/
+mobile/ios/.build/
+mobile/ios/Package.resolved
 
 # Android Gradle & IDE cache
 mobile/android/.gradle/
 mobile/android/.idea/
 mobile/android/local.properties
+mobile/ios/.xcode/
+mobile/ios/DerivedData/
+
 .gradle/
 .idea/
 *.iml
@@ -25,9 +34,15 @@ captures/
 .externalNativeBuild/
 .cxx/
 
+# iOS CocoaPods & Carthage
+Podfile.lock
+Cartfile.resolved
+
 # Keystores & Signing
 *.keystore
 *.jks
+*.mobileprovision
+*.p12
 
 # AI 助手与编辑器缓存
 .workbuddy/

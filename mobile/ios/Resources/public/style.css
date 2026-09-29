@@ -1,0 +1,19 @@
+/* 
+ * HQ 二维码生成器 - CSS 样式主入口 
+ * 模块化拆分结构：
+ * - variables.css : 设计 Token 与主题变量
+ * - base.css      : 基础重置与网格布局
+ * - header.css    : 顶部导航栏与品牌标识
+ * - panels.css    : 表单卡片、输入控件与按钮
+ * - preview.css   : 预览视口与二维码容器
+ * - history.css   : 历史记录卡片与列表
+ * - toast.css     : 全局消息通知弹窗
+ */
+
+@import url('css/variables.css');
+@import url('css/base.css');
+@import url('css/header.css');
+@import url('css/panels.css');
+@import url('css/preview.css');
+@import url('css/history.css');
+@import url('css/toast.css');

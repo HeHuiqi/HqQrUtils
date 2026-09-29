@@ -113,6 +113,9 @@
             },
             showToast(message) {
                 return invokeAndroid('showToast', [message]);
+            },
+            saveImage(dataUrl, filename) {
+                return invokeAndroid('saveImageToGallery', [dataUrl, filename]);
             }
         });
 
