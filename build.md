@@ -13,14 +13,19 @@ HqQrUtils/
 ├── common/                  # 核心通用层（CSS、算法库、NativeHost 与应用控制器）
 ├── web/                     # Web App 网页部署端源码
 ├── chrome_ext/              # Chrome 浏览器扩展端源码 (Manifest V3)
-├── mobile/                  # 移动端原生工程（当前 Android；iOS Host 待后续阶段实现）
+├── mobile/                  # 移动端原生工程
+│   ├── ios/                 # iOS 原生工程（Swift + SQLite + XcodeGen）
+│   └── android/             # Android 原生工程（Kotlin + CameraX + Room）
 ├── build_script/            # 🛠️ 自动化多端构建打包脚本目录
-│   ├── build_web.sh        # 打包构建 Web 网页产物
-│   └── build_chrome_ext.sh # 打包构建 Chrome 扩展产物
+│   ├── build_web.sh         # 打包构建 Web 网页产物 -> build/web/
+│   ├── build_chrome_ext.sh  # 打包构建 Chrome 扩展产物 -> build/chrome_ext/ & .zip
+│   ├── build_android.sh     # 组装 Android 静态资源 -> mobile/android/
+│   ├── build_ios.sh         # 组装 iOS 静态资源 -> mobile/ios/Resources/dist/
+│   └── generate_xcode_project.sh # 生成 iOS Xcode 项目 -> mobile/ios/HqQrUtils.xcodeproj
 ├── build/                   # 📦 打包构建产物目录 (已被 .gitignore 自动忽略)
-│   ├── web/                # 独立运行的 Web 网页版产物
-│   ├── chrome_ext/         # 独立运行的 Chrome 解压版扩展工程包
-│   └── chrome_ext.zip      # 可直接发行的 Chrome 扩展 Zip 压缩包
+│   ├── web/                 # 独立运行的 Web 网页版产物
+│   ├── chrome_ext/          # 独立运行的 Chrome 解压版扩展工程包
+│   └── chrome_ext.zip       # 可直接发行的 Chrome 扩展 Zip 压缩包
 ├── build.md                 # 构建指南文档 (本文档)
 ├── README.md                # 项目主说明文档
 └── CHANGE.md                # 更新日志文档
@@ -62,13 +67,28 @@ chmod +x build_script/*.sh
 ```bash
 ./build_script/build_android.sh
 ```
-- **输出位置**：
-  - Android Gradle 工程目录：`mobile/android/`
-  - 打包产物目录：`build/android/`
+- **输出位置**：`mobile/android/app/src/main/assets/public/`
+- **编译 APK**：
+  ```bash
+  cd mobile/android
+  ./gradlew assembleDebug
+  ```
+- **输出 APK**：`mobile/android/app/build/outputs/apk/debug/app-debug.apk`
+
+### (4) 构建与生成 iOS 原生工程 (iOS Target)
+> **前置依赖**：需要 macOS 环境并安装 [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)。
+
+```bash
+./build_script/generate_xcode_project.sh
+```
+- **输出位置**：`mobile/ios/HqQrUtils.xcodeproj`
 - **执行逻辑**：
-  1. 编译最新的 Web 核心静态资源。
-  2. 组装 Android `app/src/main/assets/public/` 原生资源工程。
-  3. 注入 `mobile-layout.css` 移动端布局与 `native-bridge.js` Android 触觉/剪贴板/返回键原生桥接模块。
+  1. 自动执行 `build_ios.sh` 将 Web 核心静态资源同步并注入 `mobile-layout.css` 和 `native-bridge-ios.js` 到 `mobile/ios/Resources/dist/`。
+  2. 解析 `mobile/ios/project.yml`，自动生成完整的 `HqQrUtils.xcodeproj` 工程文件。
+- **运行调试**：
+  ```bash
+  open mobile/ios/HqQrUtils.xcodeproj
+  ```
 
 ---
 
@@ -84,8 +104,15 @@ chmod +x build_script/*.sh
 ### B. 部署 Web 网页版
 - 将 **`build/web/`** 目录下的所有文件上传至任意静态 HTTP 服务器（如 Nginx、Apache、Vercel、Netlify、GitHub Pages）。
 
+### C. 运行与分发 iOS App
+- 在 Xcode 中打开 `mobile/ios/HqQrUtils.xcodeproj`。
+- 选择目标真机或模拟器（如 `iPhone 16 Pro`），按 `Cmd+R` 直接运行。
+- 发布时通过 Xcode `Product -> Archive` 进行 App Store 或 Ad-Hoc 打包。
+
 ---
 
 ## 🔒 4. Git 忽略说明
 
-打包生成的 **`build/`** 目录已在 **`.gitignore`** 中配置忽略。构建产物只保留在本地磁盘或构建服务器上，不会误提交污染 Git 源码仓库。
+- 打包生成的 **`build/`** 产物目录已在 **`.gitignore`** 中配置忽略。
+- 由 XcodeGen 动态生成的 **`mobile/ios/HqQrUtils.xcodeproj/`** 工程与 `.DS_Store` 均已加入 `.gitignore` 规则，无需提交至代码仓库。
+

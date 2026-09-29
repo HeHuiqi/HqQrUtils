@@ -1,6 +1,6 @@
-# HQ 二维码生成与历史记录管理工具 (Web & Chrome Extension & Android Native App)
+# HQ 二维码生成与历史记录管理工具 (Web & Chrome Extension & Android & iOS)
 
-一个功能强大、设计现代、全离线运行的二维码生成与历史记录管理工具。采用 Monorepo 多端架构设计，完美支持作为 **Web 网页端**、**Chrome 浏览器扩展程序 (Manifest V3)** 以及 **Android 原生 App (Kotlin + CameraX + ML Kit)** 跨平台运行。
+一个功能强大、设计现代、全离线运行的二维码生成与历史记录管理工具。采用 Monorepo 多端架构设计，完美支持作为 **Web 网页端**、**Chrome 浏览器扩展程序 (Manifest V3)**、**Android 原生 App (Kotlin + CameraX + ML Kit)** 以及 **iOS 原生 App (Swift + AVFoundation + SQLite + XcodeGen)** 跨平台运行。
 
 ![HQ QR Utils Banner](chrome_ext/icons/icon128.png)
 
@@ -19,33 +19,35 @@
 - **Web 端识别**：支持拖拽图片文件、点击上传或使用键盘快捷键 `Ctrl+V` / `Cmd+V` 粘贴截图识别。
 - **一键联动**：识别结果支持一键复制文本、直接在新标签页打开链接、或一键导入生成器重新设计。
 
-### 3. 📱 Android 移动原生端极速体验 (`mobile/android/`)
-- **原生 CameraX & Google ML Kit 扫码引擎**：参考原生 `ScanActivity.kt` 架构，使用 Kotlin + **CameraX** (硬件级视口渲染) + **ML Kit BarcodeScanning** (离线毫秒级识别)。
-- **相册与手电筒支持**：原生扫码界面右上角支持直接调起 Android 原生相册选择器，支持暗光下开关原生手电筒补光。
-- **原生历史记录管理 (`ScanHistoryActivity.kt`)**：扫码界面右上角内置历史记录按钮，可直接切入原生 RecyclerView 历史列表进行搜索、复制或删除。
-- **双向 100% 实时历史记录同步 (Bi-directional Sync)**：
-  - **Native ➔ Web**：原生扫码/相册识别成功后，自动写入原生数据库 (`ScanDatabase`) 并实时同步落盘至 Web `localStorage` 并刷新界面；原生端删除/清空操作经 `onResume → syncNativeDatabaseToWeb` 即时同步生效。
-  - **Web ➔ Native**：Web 主界面中生成/修改/收藏/删除/清空均按 **UUID 主键**即时单条推送至原生 SQLite（`syncWebRecordToNative` / `toggleFavoriteNative` / `deleteWebRecordFromNative` / `clearAllNativeRecords`），两端历史记录数据 100% 实时互通。
-  - **首次启动冷迁移**：原生库为空且为首次启动时，自动将 Web 端本地记录反向推送至原生，历史数据零丢失；非首次空库则判定为用户手动清空，同步删除 Web 记录（`isInitialNativeSync` 状态机），清空操作不会"数据复活"。
-- **精简移动端 H5 界面**：安卓 App 内部自动感知 Native 容器，智能隐藏 H5 中重复的“点击/拖拽上传”模块。
+### 3. 📱 iOS 移动原生端极速体验 (`mobile/ios/`)
+- **原生 AVFoundation 扫码引擎 (`ScannerViewController.swift`)**：硬件级极速扫码，支持手电筒补光与系统相册二维码识别。
+- **原生历史记录管理 (`HistoryViewController.swift`)**：原生 TableView 列表展示，支持搜索、星标收藏、分类过滤、左滑删除与清空。
+- **多线程安全 SQLite 引擎 (`ScanDatabase.m`)**：底层基于 `NSRecursiveLock` 与 `SQLITE_OPEN_FULLMUTEX` 互斥保护，杜绝多线程并发冲突与闪退。
+- **高颜值毛玻璃 Toast (`ToastHUD.swift`)**：系统级毛玻璃背景，集成 SF Symbols 与弹簧入场动画。
+- **双向 100% 实时数据同步**：原生扫码、收藏、删除、清空与 Web 端通过 `NativeHost` 事件及 `NotificationCenter` 双向秒级同步。
+- **保存图片至系统相册**：支持 Web 生成的二维码直接保存至 iOS 系统相册，自动处理相册写入权限与原生反馈。
+- **XcodeGen 工程化**：基于 `project.yml` 与脚本一键生成 Xcode 项目，零配置即开即用。
 
-### 4. 🧩 Chrome 右键快捷生成 (Context Menu Actions)
+### 4. 🤖 Android 移动原生端极速体验 (`mobile/android/`)
+- **原生 CameraX & Google ML Kit 扫码引擎**：使用 Kotlin + **CameraX** (硬件级视口渲染) + **ML Kit BarcodeScanning** (离线毫秒级识别)。
+- **相册与手电筒支持**：扫码界面右上角支持调起原生相册选择器与手电筒补光。
+- **原生历史记录管理 (`ScanHistoryActivity.kt`)**：内置 RecyclerView 历史列表，支持搜索、复制、收藏与删除。
+- **双向 100% 实时历史记录同步 (Bi-directional Sync)**：Web 与 Android 原生 SQLite 数据库全双工实时同步。
+- **精简移动端 H5 界面**：原生容器内自动隐藏冗余的网页端拖拽上传模块。
+
+### 5. 🧩 Chrome 右键快捷生成 (Context Menu Actions)
 - **全场景右键支持**：在 Chrome 浏览器中，右键选中文本、网页链接或网页空白处，点击右键菜单直接生成二维码，自动在主标签页中载入。
 
-### 5. 💾 数据持久化与保护机制
-- **数据防擦除**：Chrome 插件模式下优先存储于 `chrome.storage.local`，即便清理 Cookie 也不丢失数据；Web 环境与 Android App 端自动降级至 `localStorage` 与 SQLite 存储。
+### 6. 💾 数据持久化与保护机制
+- **数据防擦除**：Chrome 插件模式下优先存储于 `chrome.storage.local`，即便清理 Cookie 也不丢失数据；Web 环境与移动原生端自动降级至 `localStorage` 与 SQLite 存储。
 - **数据备份迁移**：支持一键导出/导入 JSON 格式的历史记录数据。
 
-### 6. 🔒 安全设计 (Security Design)
-- **CSP 内容安全策略**：三端 HTML 统一注入 CSP（`default-src 'self'` + `script-src 'self'` 严格模式，无 `'unsafe-inline'`），有效收敛 XSS 攻击面；白名单放行 `blob:`/`mediastream:`（扫码预览）与字体 CDN。
-- **Android 权限最小化**：仅保留 `INTERNET`/`CAMERA`/`VIBRATE` 三项权限；移除冗余存储权限（文件导入导出走系统 SAF 文档选择器）；`allowBackup="false"` 防止本地数据库被 `adb backup` 提取；禁用明文流量 (`usesCleartextTraffic`)。
-- **WebView 注入转义**：所有原生 → Web 的 `evaluateJavascript` 注入统一使用 `JSONObject.quote()` 序列化，杜绝引号/换行破坏 JS 语句。
-- **链接协议校验**：历史记录打开链接经 `isSafeSchemeUrl` 严格校验，拦截 `javascript:`/`data:`/`file:` 等危险伪协议，仅放行 `http/https` 与业务 Custom Scheme。
-- **唯一主键**：历史记录统一使用 RFC4122 v4 UUID（`crypto.randomUUID()`），Web 与原生端主键格式严格一致，精确同步无歧义。
-- **XSS 收敛**：历史渲染全部使用 `textContent` 纯文本注入，`innerHTML` 仅限静态 SVG 图标，用户输入零内联。
-
-### 7. 🎨 统一视觉与全端图标一致性
-- **桌面图标 100% 契合**：安卓 App 图标 (`ic_launcher` & `ic_launcher_round`) 全规格分辨率（`mdpi` 至 `xxxhdpi`）均由 Chrome 扩展图标 `icon128.png` 提取生成，实现多端桌面 Icon 视觉统一。
+### 7. 🔒 安全设计 (Security Design)
+- **CSP 内容安全策略**：各端统一注入严格 CSP（`default-src 'self'` + `script-src 'self'`），杜绝内联脚本注入。
+- **原生权限最小化**：仅声明相机与相册写入等必要权限，严格遵循平台权限最佳实践。
+- **WebView 注入防转义**：原生与 Web 交互传参统一安全序列化，杜绝特殊字符破坏 JS 语句执行。
+- **链接协议校验**：严格拦截 `javascript:`/`data:`/`file:` 等危险伪协议，安全放行标准网络链接与业务 Custom Scheme。
+- **统一 UUID 主键**：各端历史记录统一采用 RFC4122 v4 UUID，数据精确关联无歧义。
 
 ---
 
@@ -60,25 +62,35 @@ HqQrUtils/
 ├── chrome_ext/              # 🧩 Chrome 扩展程序源码 (Manifest V3)
 │   ├── background.js        # Background Service Worker
 │   └── icons/               # 品牌扩展图标 (16x16, 48x48, 128x128)
-├── mobile/                  # 📱 移动端原生工程与 Bridge 适配器
-│   ├── mobile-layout.css    # 移动端安全区与 Touch 样式
-│   ├── js/native-bridge.js  # Android NativeHost 适配器
-│   └── android/             # Android Kotlin 原生 Gradle 工程
-│       ├── app/src/main/java/com/hq/qrutils/
-│       │   ├── MainActivity.java        # WebView 主入口容器 + 原生 JS 桥接 (AndroidNative)
-│       │   ├── ScanActivity.kt          # CameraX & ML Kit 原生扫码组件
-│       │   ├── ScanResultActivity.kt    # 扫码结果展示与保存
-│       │   ├── ScanHistoryActivity.kt   # 原生历史记录 RecyclerView
-│       │   ├── ScanHistoryAdapter.kt    # 历史列表 RecyclerView 适配器
-│       │   ├── ScanOverlayView.kt       # 扫码对焦遮罩与扫描线
-│       │   ├── ScanRecord.kt            # Room 数据库 Entity
-│       │   ├── ScanRecordDao.kt         # Room DAO 接口
-│       │   └── ScanDatabase.kt          # Room Database 数据库
-│       └── .gitignore                   # 安卓工程构建过滤规则
+├── mobile/                  # 📱 移动端工程与 Bridge 适配层
+│   ├── mobile-layout.css    # 移动端安全区与 Touch 响应样式
+│   ├── js/native-bridge.js  # Android NativeHost 桥接适配器
+│   ├── ios/                 # 🍏 iOS 原生工程 (Swift & Objective-C)
+│   │   ├── project.yml      # XcodeGen 规范配置文件
+│   │   ├── native-bridge-ios.js # iOS NativeHost 桥接适配器
+│   │   ├── Sources/HqQrUtils/
+│   │   │   ├── AppDelegate.swift / SceneDelegate.swift
+│   │   │   ├── WebViewContainer.swift   # WKWebView 容器与 NativeHost 交互
+│   │   │   ├── ScannerViewController.swift # AVFoundation 原生扫码组件
+│   │   │   ├── HistoryViewController.swift # 原生历史记录 TableView
+│   │   │   ├── HistoryCell.swift          # 自适应历史记录卡片 Cell
+│   │   │   ├── ToastHUD.swift             # 毛玻璃 Toast 组件
+│   │   │   ├── ScanRecord.swift           # 数据模型与广播通知
+│   │   │   └── ScanDatabase.h / .m        # 线程安全 SQLite 数据库引擎
+│   │   ├── Resources/       # 原生资源与 Web 静态产物 (dist/)
+│   │   └── Assets.xcassets  # App 图标与色彩资源
+│   └── android/             # 🤖 Android 原生工程 (Kotlin)
+│       └── app/src/main/java/com/hq/qrutils/
+│           ├── MainActivity.java        # WebView 主入口与 JS 桥接
+│           ├── ScanActivity.kt          # CameraX & ML Kit 原生扫码
+│           ├── ScanHistoryActivity.kt   # 原生历史记录 RecyclerView
+│           └── ScanDatabase.kt          # Room 数据库与 DAO
 ├── build_script/            # 🛠️ 自动化构建脚本
 │   ├── build_web.sh         # 编译构建 Web 网页产物 -> build/web/
 │   ├── build_chrome_ext.sh  # 编译构建 Chrome 扩展 -> build/chrome_ext/ & .zip
-│   └── build_android.sh     # 组装 Android Native Assets -> mobile/android/
+│   ├── build_android.sh     # 组装 Android 静态资源 -> mobile/android/
+│   ├── build_ios.sh         # 组装 iOS 静态资源 -> mobile/ios/Resources/dist/
+│   └── generate_xcode_project.sh # 生成并刷新 iOS Xcode 项目 (HqQrUtils.xcodeproj)
 ├── build.md                 # 📖 详细构建与部署指南文档
 ├── CHANGE.md                # 📜 版本变更历史记录
 └── README.md                # 📖 项目综合说明文档
@@ -98,11 +110,12 @@ HqQrUtils/
 ./build_script/build_chrome_ext.sh
 
 # 3. 组装 Android 资源并编译生成 Android Debug APK (生成至 build/android/)
-./build_script/build_android.sh   # 依赖 perl（macOS BSD / Linux GNU 均兼容）
+./build_script/build_android.sh
 cd mobile/android && ./gradlew assembleDebug
-```
 
-> 全部构建脚本均已做跨平台适配（macOS / Linux），产物输出目录互不干扰。
+# 4. 组装 iOS 资源并生成 Xcode 工程 (mobile/ios/HqQrUtils.xcodeproj)
+./build_script/generate_xcode_project.sh
+```
 
 ---
 
@@ -110,7 +123,8 @@ cd mobile/android && ./gradlew assembleDebug
 
 完整的版本迭代与变更记录请参阅 **[`CHANGE.md`](CHANGE.md)**：
 
-- **[v1.2.0]** (2026-08-24)：安全加固（CSP / 权限最小化 / 注入转义 / 协议校验）与稳定性修复（Toast 崩溃、清空数据复活、UUID 统一）
+- **[v1.3.0]** (2026-09-29)：新增 iOS 原生工程支持、SQLite 线程安全加固、双向实时数据同步、毛玻璃 Toast 与一键 XcodeGen 自动化构建
+- **[v1.2.0]** (2026-08-24)：安全加固（CSP / 权限最小化 / 注入转义 / 协议校验）与稳定性修复
 - **[v1.1.0]** (2026-08-14)：Android 原生扫码与双向同步、Chrome 右键快捷生成、构建脚本与多端架构
 - **[v1.0.0]** (2026-08-14)：初始发布
 

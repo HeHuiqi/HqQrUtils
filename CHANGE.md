@@ -4,7 +4,37 @@
 
 ---
 
-## 🚀 [v1.2.0] - 2026-08-24 (最新：安全加固与稳定性修复)
+## 🚀 [v1.3.0] - 2026-09-29 (重大更新：iOS 原生工程与全链路双向同步)
+
+> 本版本正式引入 **iOS 原生工程 (`mobile/ios/`)**，完善跨端 `NativeHost` 协议体系，实现 Web、Android、iOS 三端全双工实时同步，并全面解决多线程 SQLite 锁、AutoLayout 约束冲突及相册保存等问题。
+
+### ✨ iOS 原生工程与功能支持 (iOS Native Features)
+
+1. **AVFoundation 极速扫码 (`ScannerViewController.swift`)**
+   - 硬件级摄像头渲染会话与实时二维码识别。
+   - 集成系统相册照片选择器（`PHPickerViewController`）与手电筒手势补光。
+2. **原生历史记录管理 (`HistoryViewController.swift` & `HistoryCell.swift`)**
+   - 原生 TableView 展示，集成多类别筛选（全部/文本/URL/WiFi/名片）、搜索、星标置顶与左滑单条删除。
+   - 修复 AutoLayout 动态计算冲突（修正 StackView `.fillProportionally` 与内容抗拉压优先级，彻底消除 `fittingSizeHTarget` 冲突报错）。
+3. **独立毛玻璃 Toast 组件 (`ToastHUD.swift`)**
+   - 采用系统级高斯模糊（`UIBlurEffect`），搭配 SF Symbols 图标、语义状态色与弹簧动画，支持主线程安全自动队列调度。
+4. **多线程安全 SQLite 数据库 (`ScanDatabase.h` / `ScanDatabase.m`)**
+   - 底层使用 `NSRecursiveLock` 递归锁全程互斥保护 CRUD 操作。
+   - 采用 `sqlite3_open_v2` 配合 `SQLITE_OPEN_FULLMUTEX`，配置 `sqlite3_busy_timeout` 为 3000ms，杜绝 `libsqlite3.dylib` 跨线程竞态闪退。
+   - 增加空指针校验保护，保证极端情况下的稳定性。
+5. **WKWebView 与原生深度交互**
+   - 实现 `WKUIDelegate` 接口：原生接管 Web `window.confirm()`、`window.alert()` 与 `window.prompt()`，解决 Web 清空历史确认弹窗被静默忽略的问题。
+   - 实现原生图片下载保存相册（`NativeHost.saveImage` / `UIImageWriteToSavedPhotosAlbum`），配置 `NSPhotoLibraryAddUsageDescription` 权限。
+6. **双向 100% 实时同步机制**
+   - 引入广播机制 `Notification.Name.scanDatabaseDidChange`。
+   - iOS 原生端添加、修改、星标、单条删除、全部清空历史记录时，秒级通知 `WebViewContainer` 并通过 `NativeHost.emitDatabaseSync` 同步落盘 Web 端 `localStorage`。
+7. **XcodeGen 项目自动化构建**
+   - 规范化 `mobile/ios/project.yml`，统一资源与依赖配置。
+   - 新增 `build_script/build_ios.sh` 与 `build_script/generate_xcode_project.sh`，实现一键打包资源并秒级生成标准 Xcode 项目（`HqQrUtils.xcodeproj`）。
+
+---
+
+## 🚀 [v1.2.0] - 2026-08-24 (安全加固与稳定性修复)
 
 > 本版本聚焦**安全基线加固**与**数据同步稳定性**，经多轮全量代码审查后发布。建议同步升级 Android `versionName` 至 `1.2.0`（`mobile/android/app/build.gradle`）。
 
