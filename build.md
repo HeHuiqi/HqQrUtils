@@ -117,9 +117,8 @@ chmod +x build_script/*.sh
 ## 🔒 4. Git 忽略说明
 
 - 打包生成的 **`build/`** 产物目录已在 **`.gitignore`** 中配置忽略。
-- 由 XcodeGen 动态生成的 **`mobile/ios/HqQrUtils.xcodeproj/`** 工程（含 Xcode 个人状态 `xcuserdata/`）已加入 `.gitignore`，无需提交至代码仓库；执行 `./build_script/generate_xcode_project.sh` 即可随时重建。
-- 由构建脚本自动组装的 **Web 静态资源副本**同样不入库，均在执行构建脚本时重新生成：
-  - `mobile/ios/Resources/public/`（由 `build_ios.sh` 生成）
+- Xcode 个人状态文件（**`**/xcuserdata/`** 与 **`*.xcuserstate`**）已加入 `.gitignore` 规则，避免污染 Git 仓库；Xcode 项目核心结构文件（`HqQrUtils.xcodeproj`）保持版本追踪。
+- 由构建脚本自动组装的 **Web 静态资源副本**不入库，在执行构建脚本时重新生成：
   - `mobile/android/app/src/main/assets/public/`（由 `build_android.sh` 生成）
 - `.DS_Store` 等系统元数据文件亦已忽略。
 
