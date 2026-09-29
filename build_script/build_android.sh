@@ -68,8 +68,10 @@ else
     exit 1
 fi
 
-# 6. 同步至根 build/android 方便构建查看
+# 6. 同步至根 build/android 方便构建查看（排除 Gradle 缓存与上一次的编译产物）
 cp -r "$ANDROID_DIR/"* "$ANDROID_BUILD_DIR/"
+rm -rf "$ANDROID_BUILD_DIR/.gradle" "$ANDROID_BUILD_DIR/.idea" \
+       "$ANDROID_BUILD_DIR/build" "$ANDROID_BUILD_DIR/app/build"
 
 echo "✅ [Build Android] Android 工程构建完成！"
 echo "  - Android Native Assets 资源目录: $ASSETS_DIR"
@@ -77,5 +79,5 @@ echo "  - Android Gradle 工程目录: $ANDROID_DIR"
 echo "  - 打包产物目录: $ANDROID_BUILD_DIR"
 echo ""
 echo "💡 后续打包 APK 步骤说明："
-echo "  方法  (使用 Gradle 命令行):"
+echo "  方法 1 (使用 Gradle 命令行):"
 echo "    cd mobile/android && ./gradlew assembleDebug"

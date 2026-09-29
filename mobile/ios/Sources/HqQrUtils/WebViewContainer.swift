@@ -146,21 +146,19 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScript
 
     private func handleScanRequest() {
         DispatchQueue.main.async {
-            guard let window = UIApplication.shared.windows.first else { return }
-            let rootVC = window.rootViewController
+            guard let rootVC = UIApplication.hqKeyWindow?.rootViewController else { return }
 
             let scannerVC = QRScannerViewController { [weak self] resultText, scanId, createdAt in
                 self?.deliverScanResult(resultText: resultText, scanId: scanId, createdAt: createdAt)
             }
             scannerVC.modalPresentationStyle = .fullScreen
-            rootVC?.present(scannerVC, animated: true)
+            rootVC.present(scannerVC, animated: true)
         }
     }
 
     private func handleHistoryRequest() {
         DispatchQueue.main.async { [weak self] in
-            guard let window = UIApplication.shared.windows.first else { return }
-            let rootVC = window.rootViewController
+            guard let rootVC = UIApplication.hqKeyWindow?.rootViewController else { return }
 
             let historyVC = HistoryViewController()
             historyVC.onDismiss = { [weak self] in
@@ -168,7 +166,7 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScript
             }
             let nav = UINavigationController(rootViewController: historyVC)
             nav.modalPresentationStyle = .pageSheet
-            rootVC?.present(nav, animated: true)
+            rootVC.present(nav, animated: true)
         }
     }
 
@@ -411,11 +409,7 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScript
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping () -> Void
     ) {
-        guard let window = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .flatMap({ $0.windows })
-                .first(where: { $0.isKeyWindow }) ?? UIApplication.shared.windows.first,
-              let rootVC = window.rootViewController else {
+        guard let rootVC = UIApplication.hqKeyWindow?.rootViewController else {
             completionHandler()
             return
         }
@@ -434,11 +428,7 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScript
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping (Bool) -> Void
     ) {
-        guard let window = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .flatMap({ $0.windows })
-                .first(where: { $0.isKeyWindow }) ?? UIApplication.shared.windows.first,
-              let rootVC = window.rootViewController else {
+        guard let rootVC = UIApplication.hqKeyWindow?.rootViewController else {
             completionHandler(false)
             return
         }
@@ -461,11 +451,7 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScript
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping (String?) -> Void
     ) {
-        guard let window = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .flatMap({ $0.windows })
-                .first(where: { $0.isKeyWindow }) ?? UIApplication.shared.windows.first,
-              let rootVC = window.rootViewController else {
+        guard let rootVC = UIApplication.hqKeyWindow?.rootViewController else {
             completionHandler(nil)
             return
         }
@@ -490,6 +476,22 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScript
         DispatchQueue.main.async {
             self.webView?.evaluateJavaScript(js, completionHandler: nil)
         }
+    }
+}
+
+// MARK: - UIApplication Extension (iOS 13+ 多场景安全的 KeyWindow 获取)
+
+extension UIApplication {
+
+    /// 当前活跃的 KeyWindow。
+    ///
+    /// 替代 iOS 15 起已废弃的 `UIApplication.shared.windows`，基于 `connectedScenes`
+    /// 在多场景 (iPad 多窗口 / SceneDelegate) 环境下也能正确取到前台窗口。
+    static var hqKeyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }
     }
 }
 

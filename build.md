@@ -16,14 +16,17 @@ HqQrUtils/
 ├── mobile/                  # 移动端原生工程
 │   ├── ios/                 # iOS 原生工程（Swift + SQLite + XcodeGen）
 │   └── android/             # Android 原生工程（Kotlin + CameraX + Room）
+├── test/                    # 🧪 Node 单元测试 (node:assert + node:vm)
 ├── build_script/            # 🛠️ 自动化多端构建打包脚本目录
 │   ├── build_web.sh         # 打包构建 Web 网页产物 -> build/web/
 │   ├── build_chrome_ext.sh  # 打包构建 Chrome 扩展产物 -> build/chrome_ext/ & .zip
-│   ├── build_android.sh     # 组装 Android 静态资源 -> mobile/android/
-│   ├── build_ios.sh         # 组装 iOS 静态资源 -> mobile/ios/Resources/dist/
+│   ├── build_android.sh     # 组装 Android 静态资源 -> mobile/android/app/src/main/assets/public/
+│   ├── build_ios.sh         # 组装 iOS 静态资源 -> mobile/ios/Resources/public/
 │   └── generate_xcode_project.sh # 生成 iOS Xcode 项目 -> mobile/ios/HqQrUtils.xcodeproj
 ├── build/                   # 📦 打包构建产物目录 (已被 .gitignore 自动忽略)
 │   ├── web/                 # 独立运行的 Web 网页版产物
+│   ├── android/             # Android 工程组装快照
+│   ├── ios/                 # iOS 工程组装快照
 │   ├── chrome_ext/          # 独立运行的 Chrome 解压版扩展工程包
 │   └── chrome_ext.zip       # 可直接发行的 Chrome 扩展 Zip 压缩包
 ├── build.md                 # 构建指南文档 (本文档)
@@ -83,7 +86,7 @@ chmod +x build_script/*.sh
 ```
 - **输出位置**：`mobile/ios/HqQrUtils.xcodeproj`
 - **执行逻辑**：
-  1. 自动执行 `build_ios.sh` 将 Web 核心静态资源同步并注入 `mobile-layout.css` 和 `native-bridge-ios.js` 到 `mobile/ios/Resources/dist/`。
+  1. 自动执行 `build_ios.sh` 将 Web 核心静态资源同步至 `mobile/ios/Resources/public/`，并注入 `mobile-layout.css` 与 `native-bridge-ios.js`。
   2. 解析 `mobile/ios/project.yml`，自动生成完整的 `HqQrUtils.xcodeproj` 工程文件。
 - **运行调试**：
   ```bash
@@ -114,5 +117,22 @@ chmod +x build_script/*.sh
 ## 🔒 4. Git 忽略说明
 
 - 打包生成的 **`build/`** 产物目录已在 **`.gitignore`** 中配置忽略。
-- 由 XcodeGen 动态生成的 **`mobile/ios/HqQrUtils.xcodeproj/`** 工程与 `.DS_Store` 均已加入 `.gitignore` 规则，无需提交至代码仓库。
+- 由 XcodeGen 动态生成的 **`mobile/ios/HqQrUtils.xcodeproj/`** 工程（含 Xcode 个人状态 `xcuserdata/`）已加入 `.gitignore`，无需提交至代码仓库；执行 `./build_script/generate_xcode_project.sh` 即可随时重建。
+- 由构建脚本自动组装的 **Web 静态资源副本**同样不入库，均在执行构建脚本时重新生成：
+  - `mobile/ios/Resources/public/`（由 `build_ios.sh` 生成）
+  - `mobile/android/app/src/main/assets/public/`（由 `build_android.sh` 生成）
+- `.DS_Store` 等系统元数据文件亦已忽略。
+
+---
+
+## 🧪 5. 自动化测试 (Automated Tests)
+
+```bash
+# 在项目根目录运行全部 Node 单元测试 (零运行时依赖，需要 Node 18+)
+npm test
+```
+
+- 测试文件位于 `test/`，基于 Node 内置 `node:assert/strict` 与 `node:vm` 沙箱加载前端脚本，
+  无需浏览器、模拟器或网络环境。
+- 覆盖范围：`NativeHost` 跨端适配器契约与事件缓冲、历史记录协议安全校验、纠错等级映射、存储降级与迁移标记等。
 

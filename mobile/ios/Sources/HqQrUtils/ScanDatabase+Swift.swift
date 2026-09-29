@@ -11,8 +11,7 @@ import Foundation
 extension ScanDatabase {
 
     /// Swift 便捷方法：插入 ScanRecord 结构体
-    @discardableResult
-    func insertSwift(_ record: ScanRecord) -> Void {
+    func insertSwift(_ record: ScanRecord) {
         self.insertOrReplace(record.toOCRecord())
     }
 

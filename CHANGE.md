@@ -4,13 +4,58 @@
 
 ---
 
+## 🔧 [v1.3.1] - 2026-09-29 (工程与文档一致性修正)
+
+> 本版本不改变任何业务行为，聚焦**消除文档与代码的漂移**、**统一四端版本号**、**清理无效构建配置**与**补齐自动化测试入口**。
+
+### 📝 文档一致性修正 (Documentation Accuracy)
+
+1. 修正 iOS 扫码组件文件名引用：`ScannerViewController.swift` ➔ **`QRScannerViewController.swift`**（`README.md` / `CHANGE.md` / `mobile/README.md`）。
+2. 修正 iOS 静态资源目录引用：`mobile/ios/Resources/dist/` ➔ **`mobile/ios/Resources/public/`**（`README.md` / `build.md`）。
+3. 修正 iOS 与 Android 原生历史记录功能描述，使其与实际实现严格一致：
+   - **iOS**：点击复制、左滑星标收藏、右滑单条删除、一键清空（原文误称含“搜索/分类过滤”）。
+   - **Android**：点击复制、长按单条删除、一键清空（原文误称含“搜索/收藏”）。
+4. 补全 `README.md` 目录树中遗漏的文件（`App.swift`、`ScanOverlayViewIOS.swift`、`ScanDatabase+Swift.swift`、`ScanOverlayView.kt`、`ScanResultActivity.kt`、`ScanHistoryAdapter.kt`、`ScanRecordDao.kt`、`ScanRecord.kt`），并移除不存在的 `AppDelegate.swift / SceneDelegate.swift`。
+5. 重写 `mobile/README.md` 中的 **NativeHost 通信契约表**，改为与 `common/js/native-host.js` 实现完全一致的真实方法名与签名（原表格使用 `openScanner/syncDatabase/haptic/toast` 等已废弃命名）。
+
+### ⚙️ 工程与构建修正 (Engineering Fixes)
+
+6. **统一四端版本号至 `1.3.1`**：`mobile/android/app/build.gradle`（`versionName` + `versionCode`）、`mobile/ios/project.yml`（`MARKETING_VERSION` + `CURRENT_PROJECT_VERSION`）、`chrome_ext/manifest.json`（`version`），消除 1.0.0 / 1.1.0 / 1.3.0 三处漂移。
+7. **删除无效的 `mobile/ios/Package.swift`**：该项目唯一的 iOS 构建入口是 XcodeGen（`project.yml`），原 SwiftPM 清单存在资源路径错误、平台版本冲突与 `library`/`@main` 冲突，且全仓库无任何引用。
+8. **`.gitignore` 与生成物一致化**：新增忽略 `mobile/ios/HqQrUtils.xcodeproj/`、`**/xcuserdata/`、`*.xcuserstate` 及 `mobile/ios/Resources/public/`，并将这些由脚本自动生成的产物从 Git 索引中移除，杜绝“源码副本漂移”。
+9. **`build_ios.sh` 注入逻辑加固**：与 `build_android.sh` 对齐，将 `native-bridge-ios.js` 注入点前移到 `native-host.js` 之后（确保适配器严格早于 `app.js` 执行），并新增「样式存在 + 三个脚本均存在 + 加载顺序 `native-host.js → native-bridge-ios.js → app.js`」三重断言。
+10. **修复 `build_android.sh` 提示文案笔误**（`方法  (使用 Gradle 命令行)` ➔ `方法 1`）。
+
+### 🐛 稳定性与兼容性修正 (Robustness)
+
+11. **iOS 弃用 API 替换**：新增 `UIApplication.hqKeyWindow` 助手（基于 `connectedScenes`），替换 `WebViewContainer.swift` / `ToastHUD.swift` 中 **6 处** 已废弃的 `UIApplication.shared.windows`，避免多场景（iPad 多窗口）下取不到 window 导致扫码页/历史页无法弹出。
+12. **移除 `project.yml` 中的 `-suppress-warnings`**：不再全局静音 Swift 编译告警，使弃用 API 等真实问题可见。
+13. **冷迁移状态机持久化**：`isInitialNativeSync` 原为纯内存标志，进程重启后重置会导致「原生端已清空、Web 端旧记录被重新灌回原生库」的记录复活问题。现改用 `StorageManager` 持久化迁移完成标记（`hq_qr_native_migration_done_v1`），重启后仍能正确传播清空操作。
+14. **协议校验白名单补全**：`isSafeSchemeUrl` 原先要求内容必须含 `://`，导致 `mailto:` / `tel:` / `sms:` / `geo:` 等合法无斜杠 Scheme 无法显示「打开」按钮。现对这类 Scheme 采用**显式白名单**放行，危险伪协议拦截逻辑保持不变。
+15. **iOS 平台类名语义修正**：`native-bridge-ios.js` 不再复用 Android 的 `is-android-app` 类名，统一使用 `is-native-app` + `is-ios-app`，`mobile/mobile-layout.css` 同步适配。
+
+### 🧪 工程配套 (Tooling)
+
+16. 新增 `package.json`（`private: true`，无运行时依赖）与 `npm test` 入口，测试统一通过 `test/run-tests.js` 聚合运行。
+17. 新增 3 个单元测试文件：`test/ui-history.test.js`（协议安全校验与时间格式化）、`test/qr-engine.test.js`（纠错等级映射）、`test/storage.test.js`（存储降级、导出与迁移标记）。
+
+### 🔨 构建可用性修复 (Build Availability)
+
+18. **修复 Android 工程完全无法编译的致命缺陷**：`MainActivity.java` 在新增 `WebChromeClient.onJsAlert` / `onJsConfirm` 原生弹窗接管逻辑后，**遗漏了 `android.app.AlertDialog` 与 `android.webkit.JsResult` 两个 import**，导致 `:app:compileDebugJavaWithJavac` 报「找不到符号 / 程序包不存在」并终止整个构建（`./gradlew assembleDebug` 必然失败）。现已补齐 import，Android APK 可正常产出。
+19. **清除 iOS 端此前被 `-suppress-warnings` 掩盖的 7 条弃用 API 告警**：
+    - `QRScannerViewController.swift` 的 `VNBarcodeSymbology` 大写常量（`.QR` / `.EAN13` / `.EAN8` / `.UPCE` / `.Aztec` / `.DataMatrix`）统一替换为 iOS 15+ 的小写命名（`.qr` / `.ean13` / `.ean8` / `.upce` / `.aztec` / `.dataMatrix`）。
+    - 移除 `ScanDatabase+Swift.swift` 中作用于 `Void` 返回值的冗余 `@discardableResult`。
+    - 结果：`xcodebuild` 编译告警由 17 条降至 0 条（仅剩 Xcode 工具链自身的 AppIntents 元数据提示）。
+
+---
+
 ## 🚀 [v1.3.0] - 2026-09-29 (重大更新：iOS 原生工程与全链路双向同步)
 
 > 本版本正式引入 **iOS 原生工程 (`mobile/ios/`)**，完善跨端 `NativeHost` 协议体系，实现 Web、Android、iOS 三端全双工实时同步，并全面解决多线程 SQLite 锁、AutoLayout 约束冲突及相册保存等问题。
 
 ### ✨ iOS 原生工程与功能支持 (iOS Native Features)
 
-1. **AVFoundation 极速扫码 (`ScannerViewController.swift`)**
+1. **AVFoundation 极速扫码 (`QRScannerViewController.swift`)**
    - 硬件级摄像头渲染会话与实时二维码识别。
    - 集成系统相册照片选择器（`PHPickerViewController`）与手电筒手势补光。
 2. **原生历史记录管理 (`HistoryViewController.swift` & `HistoryCell.swift`)**

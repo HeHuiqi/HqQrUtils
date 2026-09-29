@@ -33,34 +33,56 @@ cp -r "$WEB_BUILD_DIR/lib/"* "$RES_DIR/lib/"
 cp "$WEB_BUILD_DIR/index.html" "$RES_DIR/index.html"
 cp "$WEB_BUILD_DIR/style.css" "$RES_DIR/style.css"
 
-# 4. 注入 iOS 专属 Native Bridge 适配器
+# 4. 复制 mobile-layout.css (iOS 安全区适配) 与 iOS 专属 Native Bridge 适配器
+cp "$ROOT_DIR/mobile/mobile-layout.css" "$RES_DIR/css/mobile-layout.css"
 cp "$ROOT_DIR/mobile/ios/native-bridge-ios.js" "$RES_DIR/js/native-bridge-ios.js"
 
-# 5. 在 index.html 中自动注入 iOS Native Bridge 与移动端布局样式
+# 5. 在 index.html 中自动注入移动端适配 CSS 与 iOS Native Bridge
 if [ -f "$RES_DIR/index.html" ]; then
-    echo "📱 正在注入 iOS Native Bridge 到 iOS index.html..."
+    echo "📱 正在注入移动端适配 CSS 与 iOS Native Bridge 到 iOS index.html..."
+    # 使用跨平台通用的 perl 注入，兼容 macOS (BSD) 与 Linux (GNU) 环境。
+    # iOS 适配器必须在共享应用启动前安装：native-host.js -> native-bridge-ios.js -> app.js。
     if command -v perl >/dev/null 2>&1; then
         perl -i -pe 's|</head>|    <link rel="stylesheet" href="css/mobile-layout.css">\n</head>|g' "$RES_DIR/index.html"
-        perl -i -pe 's|</body>|    <script src="js/native-bridge-ios.js"></script>\n</body>|g' "$RES_DIR/index.html"
+        perl -i -pe 's|(<script src="js/native-host\.js"></script>)|$1\n    <script src="js/native-bridge-ios.js"></script>|g' "$RES_DIR/index.html"
     else
         sed -i.bak 's|</head>|    <link rel="stylesheet" href="css/mobile-layout.css">\n</head>|g' "$RES_DIR/index.html"
-        sed -i.bak 's|</body>|    <script src="js/native-bridge-ios.js"></script>\n</body>|g' "$RES_DIR/index.html"
+        sed -i.bak 's|<script src="js/native-host.js"></script>|<script src="js/native-host.js"></script>\n    <script src="js/native-bridge-ios.js"></script>|g' "$RES_DIR/index.html"
         rm -f "$RES_DIR/index.html.bak"
     fi
+
+    # 断言：移动样式存在，且 NativeHost、iOS 适配器和应用控制器严格按顺序加载。
+    if ! grep -q 'mobile-layout.css' "$RES_DIR/index.html"; then
+        echo "❌ 注入失败：index.html 中未找到 mobile-layout.css"
+        exit 1
+    fi
+
+    host_line="$(grep -n 'src="js/native-host.js"' "$RES_DIR/index.html" | cut -d: -f1 | head -n 1)"
+    bridge_line="$(grep -n 'src="js/native-bridge-ios.js"' "$RES_DIR/index.html" | cut -d: -f1 | head -n 1)"
+    app_line="$(grep -n 'src="js/app.js"' "$RES_DIR/index.html" | cut -d: -f1 | head -n 1)"
+    if [ -z "$host_line" ] || [ -z "$bridge_line" ] || [ -z "$app_line" ]; then
+        echo "❌ 注入失败：缺少 native-host.js、native-bridge-ios.js 或 app.js"
+        exit 1
+    fi
+    if [ "$host_line" -ge "$bridge_line" ] || [ "$bridge_line" -ge "$app_line" ]; then
+        echo "❌ 注入失败：脚本加载顺序必须为 native-host.js -> native-bridge-ios.js -> app.js"
+        exit 1
+    fi
+else
+    echo "❌ 注入失败：$RES_DIR/index.html 不存在（可能 Web 资源构建异常）"
+    exit 1
 fi
 
-# 6. 复制 mobile-layout.css (iOS 安全区适配)
-cp "$ROOT_DIR/mobile/mobile-layout.css" "$RES_DIR/css/mobile-layout.css"
-
-# 7. 若安装了 xcodegen，自动重新生成最新的 Xcode 工程文件
+# 6. 若安装了 xcodegen，自动重新生成最新的 Xcode 工程文件
 if command -v xcodegen >/dev/null 2>&1; then
     echo "🛠️  正在执行 xcodegen 重新生成 Xcode 工程..."
     (cd "$IOS_DIR" && xcodegen)
 fi
 
-# 8. 同步至 build/ios/ 方便查看
+# 7. 同步至 build/ios/ 方便查看（排除体积庞大的构建缓存目录）
 mkdir -p "$IOS_BUILD_DIR"
 cp -r "$IOS_DIR/"* "$IOS_BUILD_DIR/"
+rm -rf "$IOS_BUILD_DIR/.build" "$IOS_BUILD_DIR/DerivedData" "$IOS_BUILD_DIR/build"
 
 echo "✅ [Build iOS] iOS 工程资源构建完成！"
 echo "  - iOS Bundle 资源目录: $RES_DIR"

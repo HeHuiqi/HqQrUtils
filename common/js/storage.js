@@ -8,6 +8,7 @@
 
     const STORAGE_KEY = 'hq_qr_history_records_v1';
     const THEME_KEY = 'hq_qr_theme_preference';
+    const NATIVE_MIGRATION_KEY = 'hq_qr_native_migration_done_v1';
 
     const StorageManager = {
         /**
@@ -91,6 +92,32 @@
             } catch (e) {}
             if (window.chrome && chrome.storage && chrome.storage.local) {
                 chrome.storage.local.set({ [THEME_KEY]: theme });
+            }
+        },
+
+        /**
+         * 是否已完成「Web ➜ 原生」首次冷迁移。
+         *
+         * 该标记必须持久化：若仅保存在内存中，进程重启后会重新判定为「首次同步」，
+         * 从而把用户在原生端已清空的历史记录重新灌回原生数据库（记录复活）。
+         */
+        hasNativeMigrationCompleted() {
+            try {
+                return localStorage.getItem(NATIVE_MIGRATION_KEY) === '1';
+            } catch (e) {
+                return false;
+            }
+        },
+
+        /**
+         * 标记「Web ➜ 原生」冷迁移已完成 (幂等)
+         */
+        setNativeMigrationCompleted() {
+            try {
+                localStorage.setItem(NATIVE_MIGRATION_KEY, '1');
+            } catch (e) {}
+            if (window.chrome && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set({ [NATIVE_MIGRATION_KEY]: '1' });
             }
         },
 

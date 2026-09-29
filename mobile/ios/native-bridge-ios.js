@@ -82,10 +82,10 @@
 
         // 标记 iOS 容器，隐藏 H5 重复的点击/拖拽上传模块
         if (document.body) {
-            document.body.classList.add('is-android-app');
+            document.body.classList.add('is-native-app', 'is-ios-app');
         } else {
             document.addEventListener('DOMContentLoaded', function () {
-                document.body.classList.add('is-android-app');
+                document.body.classList.add('is-native-app', 'is-ios-app');
             });
         }
     }

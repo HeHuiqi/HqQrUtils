@@ -18,7 +18,8 @@
     let currentCategoryFilter = 'all';
     let lastNativeScanTime = 0;
     let lastNativeScanResult = '';
-    let isInitialNativeSync = true;
+    // 首次冷迁移标记：从持久化存储恢复，避免进程重启后把已清空的原生记录重新灌回。
+    let isInitialNativeSync = !StorageManager.hasNativeMigrationCompleted();
 
     // DOM Cache
     const DOM = {
@@ -992,6 +993,8 @@
             if (nativeRecords.length === 0) {
                 if (isInitialNativeSync) {
                     isInitialNativeSync = false;
+                    // 持久化「已完成冷迁移」标记，保证重启后不再重复冷迁移。
+                    StorageManager.setNativeMigrationCompleted();
                     // 首次启动冷迁移：若 Web 端已有本地历史记录，自动反向推送到原生宿主。
                     if (historyRecords.length > 0) {
                         historyRecords.forEach(function (rec) {
@@ -1011,8 +1014,9 @@
                 return;
             }
 
-            // 收到有效原生记录，标记初次同步已完成
+            // 收到有效原生记录，标记初次同步已完成（并持久化，防止重启后误触发冷迁移）
             isInitialNativeSync = false;
+            StorageManager.setNativeMigrationCompleted();
 
             // 2. 基于统一的 UUID 构建原生记录 Map
             const nativeMap = new Map();

@@ -463,7 +463,7 @@ extension QRScannerViewController: PHPickerViewControllerDelegate {
             }
         }
 
-        request.symbologies = [.QR, .code128, .EAN13, .EAN8, .UPCE, .Aztec, .DataMatrix, .code39, .code93]
+        request.symbologies = [.qr, .code128, .ean13, .ean8, .upce, .aztec, .dataMatrix, .code39, .code93]
 
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         DispatchQueue.global(qos: .userInitiated).async {

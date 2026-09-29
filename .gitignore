@@ -15,6 +15,14 @@ mobile/ios/DerivedData/
 mobile/ios/.build/
 mobile/ios/Package.resolved
 
+# 由 build_ios.sh / generate_xcode_project.sh 自动生成的产物（Xcode 工程 + Web 静态资源副本）
+mobile/ios/HqQrUtils.xcodeproj/
+mobile/ios/Resources/public/
+
+# Xcode 个人状态文件 (xcuserdata / xcuserstate)
+**/xcuserdata/
+*.xcuserstate
+
 # Android Gradle & IDE cache
 mobile/android/.gradle/
 mobile/android/.idea/

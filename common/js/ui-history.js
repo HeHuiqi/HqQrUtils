@@ -254,14 +254,19 @@
         isSafeSchemeUrl(content) {
             if (!content || typeof content !== 'string') return false;
             const trimmed = content.trim();
-            if (!trimmed.includes('://')) return false;
+            if (!trimmed) return false;
 
             // 严格拦截可执行、本地敏感或浏览器内部伪协议
             const dangerousPattern = /^(javascript|data|vbscript|file|about|blob|chrome|resource):/i;
             if (dangerousPattern.test(trimmed)) return false;
 
-            // 必须以合法 Scheme 语法开头：[a-zA-Z][a-zA-Z0-9+.-]*://
-            return /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed);
+            if (trimmed.includes('://')) {
+                // 标准层级式 URL：必须以合法 Scheme 语法开头 [a-zA-Z][a-zA-Z0-9+.-]*://
+                return /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed);
+            }
+
+            // 无 "//" 的 Mailto/Tel 类标准 Scheme：仅在显式白名单内放行
+            return /^(mailto|tel|sms|smsto|geo):\S/i.test(trimmed);
         }
     };
 

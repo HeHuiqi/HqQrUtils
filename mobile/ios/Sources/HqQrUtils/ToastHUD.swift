@@ -43,12 +43,7 @@ class ToastHUD {
     /// 在当前活跃窗口中弹出 Toast 提示
     func show(message: String, type: ToastType = .info, in window: UIWindow? = nil) {
         DispatchQueue.main.async {
-            guard let targetWindow = window ??
-                    UIApplication.shared.connectedScenes
-                        .compactMap({ $0 as? UIWindowScene })
-                        .flatMap({ $0.windows })
-                        .first(where: { $0.isKeyWindow }) ??
-                    UIApplication.shared.windows.first else { return }
+            guard let targetWindow = window ?? UIApplication.hqKeyWindow else { return }
 
             // 移除当前已有 Toast，防止重叠
             self.currentToast?.removeFromSuperview()
